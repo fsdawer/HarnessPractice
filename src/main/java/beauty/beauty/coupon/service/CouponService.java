@@ -11,8 +11,8 @@ public interface CouponService {
     // 1. 쿠폰 생성 (미용사/관리자가 쿠폰 자체를 만드는 것)
     void createCoupon(Long userId, IssueCouponRequest request);
 
-    // 2. 유저에게 쿠폰 발급 (관리자가 특정 유저에게 지급)
-    void grantCoupon(Long userId, Long couponId);
+    // 2. 유저에게 쿠폰 발급 (쿠폰 소유 미용사만 가능)
+    void grantCoupon(Long requesterId, Long targetUserId, Long couponId);
 
     // 3. 내 쿠폰 목록 조회 (유저 — 미사용 + 유효기간 내)
     List<CouponResponse> getMyCoupons(Long userId);

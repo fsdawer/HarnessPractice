@@ -13,7 +13,7 @@
       </div>
 
       <div v-else class="coupon-list">
-        <div v-for="c in coupons" :key="c.userCouponId" class="coupon-card card" :class="{ used: c.isUsed }">
+        <div v-for="c in coupons" :key="c.userCouponId" class="coupon-card card">
           <div class="coupon-top">
             <span class="coupon-name">{{ c.name }}</span>
             <span class="coupon-discount">{{ c.discountRate }}% 할인</span>
@@ -24,8 +24,7 @@
           </div>
           <div class="coupon-bottom">
             <span class="coupon-expire">{{ c.expiredAt ? formatDate(c.expiredAt) + ' 까지' : '기간 무제한' }}</span>
-            <span v-if="c.isUsed" class="badge-used">사용 완료</span>
-            <span v-else class="badge-valid">사용 가능</span>
+            <span class="badge-valid">사용 가능</span>
           </div>
         </div>
       </div>
@@ -69,7 +68,6 @@ onMounted(load)
 .coupon-list { display: flex; flex-direction: column; gap: 10px; }
 
 .coupon-card { padding: 16px; }
-.coupon-card.used { opacity: 0.5; }
 
 .coupon-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .coupon-name { font-size: 15px; font-weight: 700; }
@@ -81,7 +79,6 @@ onMounted(load)
 .coupon-expire { font-size: 12px; color: var(--text-muted); }
 
 .badge-valid { font-size: 11px; font-weight: 700; color: var(--primary); background: var(--primary-light, #ede9fe); padding: 3px 8px; border-radius: 20px; }
-.badge-used { font-size: 11px; font-weight: 700; color: var(--text-muted); background: var(--bg-surface); padding: 3px 8px; border-radius: 20px; }
 
 .state-center { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 60px 0; }
 .state-text { color: var(--text-muted); font-size: 15px; }
