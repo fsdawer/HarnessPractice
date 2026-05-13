@@ -111,4 +111,24 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
     List<Object[]> getDailyStatsGroupByStylistAndStatus(
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end);
+
+    // [대시보드] 미용사 ID + reservedAt 범위로 예약 건수
+    @Query("SELECT COUNT(r) FROM Reservation r " +
+           "WHERE r.stylistProfile.id = :stylistId " +
+           "AND r.reservedAt >= :start AND r.reservedAt < :end")
+    long countByStylistInRange(@Param("stylistId") Long stylistId,
+                                @Param("start") LocalDateTime start,
+                                @Param("end") LocalDateTime end);
+
+    // [대시보드] 미용사 ID + status로 건수
+    long countByStylistProfileIdAndStatus(Long stylistId, Reservation.Status status);
+
+    // [대시보드] 최근 예약 N건 — fetch join (user, service)
+    @Query("SELECT r FROM Reservation r " +
+           "JOIN FETCH r.user " +
+           "JOIN FETCH r.service " +
+           "WHERE r.stylistProfile.id = :stylistId " +
+           "ORDER BY r.createdAt DESC")
+    List<Reservation> findRecentByStylistId(@Param("stylistId") Long stylistId,
+                                             Pageable pageable);
 }

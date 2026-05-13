@@ -32,6 +32,12 @@ const routes = [
   },
   // 주의: /stylist/me, /stylist/manage, /stylist/reservations 등 정적 경로를 /:id 보다 먼저 선언
   {
+    path: '/stylist/dashboard',
+    name: 'StylistDashboard',
+    component: () => import('@/views/StylistDashboardView.vue'),
+    meta: { requiresAuth: true, stylistOnly: true },
+  },
+  {
     path: '/stylist/manage',
     name: 'StylistManage',
     component: () => import('@/views/StylistManageView.vue'),
