@@ -3,6 +3,7 @@ package beauty.beauty.stylist.controller;
 import beauty.beauty.global.annotation.LoginUserId;
 import beauty.beauty.stylist.dto.ServiceRequest;
 import beauty.beauty.stylist.dto.ServiceResponse;
+import beauty.beauty.stylist.dto.StylistDashboardResponse;
 import beauty.beauty.stylist.dto.StylistProfileResponse;
 import beauty.beauty.stylist.dto.UpdateStylistProfileRequest;
 import beauty.beauty.stylist.dto.WorkingHoursRequest;
@@ -95,5 +96,10 @@ public class StylistController {
                                                             @RequestBody WorkingHoursRequest request) {
         return ResponseEntity.ok(stylistService.updateHours(userId, request));
     }
-}
 
+    // GET /api/stylists/dashboard   미용사 대시보드 (예약/매출/리뷰 요약 + 최근 예약 5건)
+    @GetMapping("/dashboard")
+    public ResponseEntity<StylistDashboardResponse> getDashboard(@LoginUserId Long userId) {
+        return ResponseEntity.ok(stylistService.getDashboard(userId));
+    }
+}

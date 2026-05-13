@@ -26,4 +26,15 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     // 10분 이상 지난 PENDING 결제를 스케줄러에서 청소할 때 사용
     List<Payment> findByStatusAndCreatedAtBefore(Payment.PayStatus status, LocalDateTime dateTime);
+
+    // [대시보드] 미용사 + 결제 상태 + reservedAt 기준 기간 합계
+    @Query("SELECT COALESCE(SUM(p.amount), 0) FROM Payment p " +
+           "JOIN p.reservation r " +
+           "WHERE r.stylistProfile.id = :stylistId " +
+           "AND p.status = :status " +
+           "AND r.reservedAt >= :start AND r.reservedAt < :end")
+    long sumAmountByStylistAndStatusInRange(@Param("stylistId") Long stylistId,
+                                             @Param("status") Payment.PayStatus status,
+                                             @Param("start") LocalDateTime start,
+                                             @Param("end") LocalDateTime end);
 }

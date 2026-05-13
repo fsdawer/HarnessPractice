@@ -9,6 +9,11 @@ import beauty.beauty.stylist.repository.OperatingHoursRepository;
 import beauty.beauty.stylist.repository.SalonRepository;
 import beauty.beauty.stylist.repository.StylistProfileRepository;
 import beauty.beauty.stylist.repository.StylistServiceRepository;
+import beauty.beauty.payment.entity.Payment;
+import beauty.beauty.payment.repository.PaymentRepository;
+import beauty.beauty.reservation.entity.Reservation;
+import beauty.beauty.reservation.repository.ReservationRepository;
+import beauty.beauty.review.repository.ReviewRepository;
 import beauty.beauty.global.kakao.KakaoGeocodingService;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -17,8 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -35,6 +45,9 @@ public class StylistServiceImpl implements StylistService {
     private final OperatingHoursRepository operatingHoursRepository;
     private final SalonRepository salonRepository;
     private final KakaoGeocodingService kakaoGeocodingService;
+    private final ReservationRepository reservationRepository;
+    private final PaymentRepository paymentRepository;
+    private final ReviewRepository reviewRepository;
 
     private static final GeometryFactory GEO_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -244,6 +257,71 @@ public class StylistServiceImpl implements StylistService {
                 .openTime(saved.getOpenTime())
                 .closeTime(saved.getCloseTime())
                 .isDayOff(saved.isClosed())
+                .build();
+    }
+
+    @Override
+    public StylistDashboardResponse getDashboard(Long userId) {
+        StylistProfile profile = stylistProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new EntityNotFoundException("해당 유저의 미용사 프로필을 찾을 수 없습니다."));
+        Long stylistId = profile.getId();
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime todayStart = today.atStartOfDay();
+        LocalDateTime tomorrowStart = today.plusDays(1).atStartOfDay();
+        LocalDateTime monthStart = today.withDayOfMonth(1).atStartOfDay();
+        LocalDateTime nextMonthStart = today.withDayOfMonth(1).plusMonths(1).atStartOfDay();
+
+        // 예약 통계
+        long todayCount = reservationRepository.countByStylistInRange(stylistId, todayStart, tomorrowStart);
+        long monthCount = reservationRepository.countByStylistInRange(stylistId, monthStart, nextMonthStart);
+        long pendingCount = reservationRepository.countByStylistProfileIdAndStatus(stylistId, Reservation.Status.PENDING);
+
+        // 매출 통계
+        long monthRevenue = paymentRepository.sumAmountByStylistAndStatusInRange(
+                stylistId, Payment.PayStatus.PAID, monthStart, nextMonthStart);
+        long monthRefund = paymentRepository.sumAmountByStylistAndStatusInRange(
+                stylistId, Payment.PayStatus.REFUNDED, monthStart, nextMonthStart);
+
+        // 리뷰 통계 (기존 calcRatingStats 재사용: [AVG(rating), COUNT(*)])
+        List<Object[]> stats = reviewRepository.calcRatingStats(stylistId);
+        BigDecimal avgRating = BigDecimal.ZERO;
+        long totalReviewCount = 0L;
+        if (!stats.isEmpty() && stats.get(0)[0] != null) {
+            Object avgObj = stats.get(0)[0];
+            Object countObj = stats.get(0)[1];
+            if (avgObj instanceof BigDecimal bd) {
+                avgRating = bd.setScale(1, RoundingMode.HALF_UP);
+            } else if (avgObj instanceof Number n) {
+                avgRating = BigDecimal.valueOf(n.doubleValue()).setScale(1, RoundingMode.HALF_UP);
+            }
+            if (countObj instanceof Number n) {
+                totalReviewCount = n.longValue();
+            }
+        }
+
+        // 최근 예약 5건
+        List<RecentReservationDto> recent = reservationRepository
+                .findRecentByStylistId(stylistId, PageRequest.of(0, 5))
+                .stream()
+                .map(RecentReservationDto::from)
+                .collect(Collectors.toList());
+
+        return StylistDashboardResponse.builder()
+                .reservation(StylistDashboardResponse.ReservationStats.builder()
+                        .todayCount(todayCount)
+                        .monthCount(monthCount)
+                        .pendingCount(pendingCount)
+                        .build())
+                .sales(StylistDashboardResponse.SalesStats.builder()
+                        .monthRevenue(monthRevenue)
+                        .monthRefund(monthRefund)
+                        .build())
+                .review(StylistDashboardResponse.ReviewStats.builder()
+                        .totalCount(totalReviewCount)
+                        .avgRating(avgRating)
+                        .build())
+                .recentReservations(recent)
                 .build();
     }
 }

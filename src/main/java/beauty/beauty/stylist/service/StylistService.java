@@ -5,6 +5,7 @@ import beauty.beauty.stylist.dto.ServiceResponse;
 import beauty.beauty.stylist.dto.StylistProfileResponse;
 import beauty.beauty.stylist.dto.UpdateStylistProfileRequest;
 import beauty.beauty.stylist.dto.WorkingHoursRequest;
+import beauty.beauty.stylist.dto.StylistDashboardResponse;
 import beauty.beauty.stylist.dto.WorkingHoursResponse;
 import java.util.List;
 
@@ -27,4 +28,6 @@ public interface StylistService {
     WorkingHoursResponse updateHours(Long userId, WorkingHoursRequest request);
 
     List<StylistProfileResponse> getNearbyStylists(double lat, double lng, int radius);
+
+    StylistDashboardResponse getDashboard(Long userId);
 }
