@@ -8,6 +8,7 @@ import beauty.beauty.review.dto.ReviewRequest;
 import beauty.beauty.review.dto.ReviewResponse;
 import beauty.beauty.review.dto.ReviewUpdateRequest;
 import beauty.beauty.review.dto.SalonReviewsResponse;
+import beauty.beauty.review.entity.Review;
 import beauty.beauty.review.repository.ReviewRepository;
 import beauty.beauty.stylist.entity.StylistProfile;
 import beauty.beauty.stylist.repository.StylistProfileRepository;
@@ -170,13 +171,20 @@ public class ReviewServiceImpl implements ReviewService {
         StylistProfile stylistProfile = review.getStylistProfile();
         review.setDeletedAt(LocalDateTime.now());
         recalculateRating(stylistProfile);
-
     }
 
 
     private void recalculateRating(StylistProfile stylistProfile) {
-        Object[] stats = reviewRepository.calcRatingStats(stylistProfile.getId());
-        long count = stats[1] != null ? ((Number) stats[1]).longValue() : 0L;
+        List<Object[]> results = reviewRepository.calcRatingStats(stylistProfile.getId());
+        Object[] stats = (results != null && !results.isEmpty()) ? results.get(0) : null;
+
+        if (stats == null || stats.length < 2 || stats[1] == null) {
+            stylistProfile.setRating(BigDecimal.ZERO);
+            stylistProfile.setReviewCount(0);
+            return;
+        }
+
+        long count = ((Number) stats[1]).longValue();
         if (count == 0) {
             stylistProfile.setRating(BigDecimal.ZERO);
             stylistProfile.setReviewCount(0);

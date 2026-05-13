@@ -250,6 +250,7 @@ public class PaymentServiceImpl implements PaymentService {
     public void cancelPendingByOrderId(String orderId) {
         paymentRepository.findByOrderId(orderId).ifPresent(payment -> {
             if (payment.getStatus() != Payment.PayStatus.PENDING) return;
+            // 결제 상태가 pending이 아니면 메서드 종료 아무것도 없이 리턴
 
             Reservation reservation = payment.getReservation();
             if (reservation != null && reservation.getStatus() == Reservation.Status.PENDING) {

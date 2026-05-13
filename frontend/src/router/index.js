@@ -96,6 +96,12 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/mypage/coupons',
+    name: 'MyCoupons',
+    component: () => import('@/views/MyPageCouponsView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/mypage/settings',
     name: 'MySettings',
     component: () => import('@/views/MyPageSettingsView.vue'),

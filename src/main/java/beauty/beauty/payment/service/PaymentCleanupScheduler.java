@@ -48,7 +48,10 @@ public class PaymentCleanupScheduler {
 
     @Scheduled(fixedDelay = 60000)
     public void cleanupExpiredPayments() {
+        // 현재 시각 기준 10분 전 시점 계산 — 이 시각 이전에 생성된 PENDING이 만료 대상
         LocalDateTime expiredTime = LocalDateTime.now().minusMinutes(10);
+
+        // 10분이 지나도 PENDING 상태인 결제 목록 조회
         List<Payment> expiredPayments = paymentRepository
                 .findByStatusAndCreatedAtBefore(Payment.PayStatus.PENDING, expiredTime);
         if (expiredPayments.isEmpty()) return;
@@ -57,43 +60,51 @@ public class PaymentCleanupScheduler {
             try {
                 processExpiredPayment(payment);
             } catch (Exception e) {
-                // 한 건 실패해도 나머지 계속 처리, 다음 스케줄러 실행에서 재시도
+                // 한 건 실패해도 나머지는 계속 처리
+                // 실패한 건은 DB에서 삭제되지 않으므로 다음 스케줄러 실행(1분 후)에서 자동 재시도
                 log.error("[Cleanup] 처리 실패, 다음 실행에서 재시도 — paymentId={}", payment.getId(), e);
             }
         }
     }
 
     private void processExpiredPayment(Payment payment) throws Exception {
-        // Toss에서 실제 결제 상태 조회 (404면 null — 결제창 미진입 상태의 정상 만료)
+        // Toss에 실제 결제 상태 조회 — 결제창 진입 전 만료된 건은 Toss에 기록 자체가 없어 404 반환 → null
         String tossResponse = queryTossOrder(payment.getOrderId());
 
         if (tossResponse != null) {
+            // Toss 응답 JSON에서 status(결제 상태)와 paymentKey(결제 키) 추출
             JsonNode node = objectMapper.readTree(tossResponse);
             String tossStatus = node.path("status").asText("");
             String paymentKey = node.path("paymentKey").asText(null);
 
-            // Toss DONE인데 DB PENDING → confirm() Flow 3 실패 불일치 건 → 보상 트랜잭션
+            // Toss는 DONE(결제 완료)인데 DB는 PENDING → confirm() Flow 3 실패로 인한 데이터 불일치
+            // → 보상 트랜잭션: Toss 취소 API 호출로 실제 환불 처리
             if ("DONE".equals(tossStatus) && paymentKey != null) {
                 cancelTossPayment(paymentKey);
                 log.warn("[보상 트랜잭션] DB 불일치 건 Toss 취소 완료 — orderId={}", payment.getOrderId());
             }
         }
 
-        // DB 정리 — 건별 독립 트랜잭션 (한 건 실패가 다른 건 롤백으로 이어지지 않도록)
+        // DB 정리 — 건별 독립 트랜잭션 사용
+        // 한 건의 DB 정리 실패가 다른 건의 롤백으로 이어지지 않도록 분리
         transactionTemplate.execute(status -> {
             Reservation reservation = payment.getReservation();
+
+            // 연관 예약이 아직 PENDING이면 CANCELLED로 변경 (슬롯 점유 해제)
             if (reservation != null && reservation.getStatus() == Reservation.Status.PENDING) {
                 reservation.setStatus(Reservation.Status.CANCELLED);
                 reservationRepository.save(reservation);
             }
+
+            // 만료된 결제 레코드 삭제
             paymentRepository.delete(payment);
             return null;
         });
         log.info("[Cleanup] 만료 결제 정리 완료 — paymentId={}", payment.getId());
     }
 
-    // Toss 주문 조회 — 404(Toss에 기록 없음)면 null 반환
     private String queryTossOrder(String orderId) throws Exception {
+        // Toss 주문 조회 API 요청 생성 — orderId로 실제 결제 상태 확인
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.tosspayments.com/v1/payments/orders/" + orderId))
                 .header("Authorization", "Basic " + tossCredentials())
@@ -101,7 +112,11 @@ public class PaymentCleanupScheduler {
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // 404 → Toss에 해당 주문 기록 없음 (결제창 열기 전 만료된 정상 케이스) → null 반환
         if (response.statusCode() == 404) return null;
+
+        // 그 외 오류 → 예외 던짐 → cleanupExpiredPayments의 catch에서 로그 후 다음 실행에서 재시도
         if (response.statusCode() != 200) {
             throw new RuntimeException("Toss 조회 실패 [" + response.statusCode() + "]: " + response.body());
         }
@@ -109,6 +124,7 @@ public class PaymentCleanupScheduler {
     }
 
     private void cancelTossPayment(String paymentKey) throws Exception {
+        // Toss 결제 취소 API 요청 생성 — paymentKey로 해당 결제 환불
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.tosspayments.com/v1/payments/" + paymentKey + "/cancel"))
                 .header("Authorization", "Basic " + tossCredentials())
@@ -117,12 +133,15 @@ public class PaymentCleanupScheduler {
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+        // 취소 실패 시 예외 던짐 → processExpiredPayment의 상위 catch로 전파 → 다음 실행에서 재시도
         if (response.statusCode() != 200) {
             throw new RuntimeException("Toss 취소 실패 [" + response.statusCode() + "]: " + response.body());
         }
     }
 
     private String tossCredentials() {
+        // Toss API는 Basic 인증 사용 — "secretKey:" 문자열을 Base64로 인코딩해 Authorization 헤더에 담음
         return Base64.getEncoder()
                 .encodeToString((secretKey.trim() + ":").getBytes(StandardCharsets.UTF_8));
     }

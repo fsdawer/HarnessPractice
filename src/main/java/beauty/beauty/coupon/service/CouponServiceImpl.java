@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -40,7 +41,7 @@ public class CouponServiceImpl implements CouponService {
                         .discountRate(request.getDiscountRate())
                         .minPrice(request.getMinPrice())
                         .maxDiscount(request.getMaxDiscount())
-                        .startAt(request.getStartAt())
+                        .startAt(request.getStartAt() != null ? request.getStartAt() : LocalDateTime.now())
                         .expiredAt(request.getExpiredAt())
                         .stylist(stylistProfile)
                         .build());

@@ -330,3 +330,56 @@ k6 run -e TOKEN="Bearer eyJ..." -e STYLIST_ID=1 -e SERVICE_ID=1 k6/test_distribu
 - **Redis Stream `this` 주의**: `@PostConstruct`에서 `listenerContainer.receive(..., this)`로 등록 시 raw bean 전달 → `@Transactional` 미적용 → Lazy proxy 초기화 불가. Listener 내부에서 ID만 추출해 서비스에 전달할 것
 - **`StylistServiceItem.duration`**: 필드명은 `duration` (프론트의 `durationMinutes`와 다름). `ReservationResponse`에 `serviceDuration`으로 매핑
 - **Vue `v-if` + DOM 초기화**: `isNearbyMode = true` 후 `await nextTick()` 필수, 그 후 `kakao.maps.load()` 호출
+
+## 에이전트 팀 & 워크트리 개발 워크플로우
+
+### 에이전트 구성 (`.claude/agents/`)
+| 에이전트 | 역할 | 모델 |
+|---|---|---|
+| `manager-agent` | 전체 조율 오케스트레이터 | opus |
+| `planner-agent` | 설계 및 태스크 분해 | opus |
+| `backend-agent` | 백엔드/프론트 구현 | sonnet |
+| `test-agent` | 테스트 작성 및 실행 | sonnet |
+| `review-agent` | 코드 리뷰 | sonnet |
+
+### 워크트리 기반 개발 규칙
+모든 기능 구현 및 버그 수정은 새 Git 워크트리에서 진행한다.
+
+#### 1. 워크트리 생성
+```bash
+# 기능 개발
+git worktree add ../beauty-feature-<기능명> -b feature/<기능명>
+
+# 버그 수정
+git worktree add ../beauty-fix-<이슈명> -b fix/<이슈명>
+```
+
+#### 2. 워크트리에서 작업
+```bash
+cd ../beauty-feature-<기능명>
+# backend-agent, test-agent, review-agent 순서로 작업
+```
+
+#### 3. 검증 (워크트리 내에서)
+```bash
+./gradlew test                    # 테스트 전체 통과 필수
+./gradlew build -x test           # 빌드 성공 확인
+cd frontend && npm run build      # 프론트 빌드 확인
+```
+
+#### 4. 병합 (검증 통과 후)
+```bash
+# main 브랜치로 이동해 병합
+git checkout main
+git merge --no-ff feature/<기능명> -m "feat: <기능명>"
+
+# 워크트리 정리
+git worktree remove ../beauty-feature-<기능명>
+git branch -d feature/<기능명>
+```
+
+#### 워크트리 규칙
+- `main` 브랜치에서 직접 구현 금지
+- 워크트리 경로는 항상 프로젝트 루트 밖 (`../beauty-*`)
+- 병합 조건: `./gradlew test` 전체 통과 + review-agent PASS
+- 병합 후 워크트리 즉시 삭제

@@ -94,6 +94,87 @@
             </div>
           </div>
 
+          <!-- 쿠폰 관리 -->
+          <div v-if="activeSection === 'coupon'" class="card">
+            <h2 class="card-section-title">쿠폰 생성</h2>
+            <div class="coupon-form-grid">
+              <div class="form-group">
+                <label class="form-label">쿠폰 코드</label>
+                <input v-model="couponForm.code" class="form-input" placeholder="예: SUMMER2024" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">쿠폰 이름</label>
+                <input v-model="couponForm.name" class="form-input" placeholder="예: 여름 할인 쿠폰" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">할인율 (%)</label>
+                <input v-model.number="couponForm.discountRate" type="number" class="form-input" min="1" max="100" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">최소 금액 (원)</label>
+                <input v-model.number="couponForm.minPrice" type="number" class="form-input" placeholder="없음" min="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">최대 할인 (원)</label>
+                <input v-model.number="couponForm.maxDiscount" type="number" class="form-input" placeholder="없음" min="0" />
+              </div>
+              <div class="form-group">
+                <label class="form-label">만료일</label>
+                <input v-model="couponForm.expiredAt" type="datetime-local" class="form-input" />
+              </div>
+            </div>
+            <p v-if="couponMsg" :class="couponSuccess ? 'msg-success' : 'msg-error'" style="margin-top:8px">{{ couponMsg }}</p>
+            <div class="save-row">
+              <button class="btn btn-primary" :disabled="couponSaving" @click="createCouponFn">
+                <span v-if="couponSaving" class="spinner" style="width:14px;height:14px;border-width:2px"></span>
+                <span v-else>쿠폰 생성</span>
+              </button>
+            </div>
+
+            <div style="margin-top:28px">
+              <h2 class="card-section-title" style="margin-bottom:12px">생성한 쿠폰</h2>
+              <div v-if="couponList.length === 0" class="manage-hint">생성한 쿠폰이 없습니다.</div>
+              <div v-else class="coupon-list-manage">
+                <div v-for="c in couponList" :key="c.code" class="coupon-row-manage">
+                  <div class="coupon-row-top">
+                    <span class="coupon-code-badge">{{ c.code }}</span>
+                    <span class="coupon-row-name">{{ c.name }}</span>
+                    <span class="coupon-row-rate">{{ c.discountRate }}% 할인</span>
+                  </div>
+                  <div class="coupon-row-meta">
+                    <span v-if="c.minPrice">{{ c.minPrice.toLocaleString() }}원 이상</span>
+                    <span v-if="c.maxDiscount"> · 최대 {{ c.maxDiscount.toLocaleString() }}원</span>
+                    <span v-if="c.expiredAt"> · {{ formatExpiry(c.expiredAt) }} 까지</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:28px">
+              <h2 class="card-section-title" style="margin-bottom:12px">쿠폰 발급</h2>
+              <div class="coupon-form-grid">
+                <div class="form-group">
+                  <label class="form-label">쿠폰 선택</label>
+                  <select v-model="grantCouponId" class="form-input">
+                    <option :value="null" disabled>쿠폰을 선택하세요</option>
+                    <option v-for="c in couponList" :key="c.userCouponId" :value="c.userCouponId">{{ c.name }} ({{ c.discountRate }}%)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">사용자 ID</label>
+                  <input v-model.number="grantUserId" type="number" class="form-input" placeholder="발급할 사용자 ID" />
+                </div>
+              </div>
+              <p v-if="grantMsg" :class="grantSuccess ? 'msg-success' : 'msg-error'" style="margin-top:8px">{{ grantMsg }}</p>
+              <div class="save-row">
+                <button class="btn btn-ghost" :disabled="grantSaving" @click="grantCouponFn">
+                  <span v-if="grantSaving" class="spinner" style="width:14px;height:14px;border-width:2px"></span>
+                  <span v-else>발급</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- 서비스 -->
           <div v-if="activeSection === 'services'" class="card">
             <h2 class="card-section-title">서비스 메뉴</h2>
@@ -137,12 +218,14 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { stylistApi } from '@/api/stylist'
+import { couponApi } from '@/api/coupon'
 
 const activeSection = ref('basic')
 const sections = [
   { id: 'basic',     label: '기본 정보' },
   { id: 'hours',     label: '영업시간' },
   { id: 'services',  label: '서비스 메뉴' },
+  { id: 'coupon',    label: '쿠폰 관리' },
 ]
 const serviceCategories = ['커트', '일반펌', '열펌', '염색', '클리닉', '기타']
 
@@ -175,6 +258,7 @@ onMounted(async () => {
       })
     }
   } catch {}
+  loadCoupons()
 })
 
 async function saveBasic() {
@@ -214,6 +298,52 @@ async function saveServices() {
 
 function addService() { services.value.push({ name: '', category: '커트', durationMinutes: 60, price: 0, description: '', isNew: true }) }
 function removeService(idx, svc) { if (svc.id && !svc.isNew) deletedServiceIds.value.push(svc.id); services.value.splice(idx, 1) }
+
+const couponForm = ref({ code: '', name: '', discountRate: 10, minPrice: null, maxDiscount: null, expiredAt: '' })
+const couponList = ref([])
+const couponMsg = ref(''); const couponSuccess = ref(false); const couponSaving = ref(false)
+const grantCouponId = ref(null); const grantUserId = ref(null)
+const grantMsg = ref(''); const grantSuccess = ref(false); const grantSaving = ref(false)
+
+function formatExpiry(str) {
+  if (!str) return ''
+  const d = new Date(str)
+  return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`
+}
+
+async function loadCoupons() {
+  try { couponList.value = (await couponApi.getStylistCoupons()).data || [] } catch { couponList.value = [] }
+}
+
+async function createCouponFn() {
+  if (!couponForm.value.code || !couponForm.value.name || !couponForm.value.expiredAt) { couponMsg.value = '코드, 이름, 만료일은 필수입니다.'; couponSuccess.value = false; return }
+  couponSaving.value = true; couponMsg.value = ''
+  try {
+    await couponApi.createCoupon({
+      code: couponForm.value.code,
+      name: couponForm.value.name,
+      discountRate: couponForm.value.discountRate,
+      minPrice: couponForm.value.minPrice || null,
+      maxDiscount: couponForm.value.maxDiscount || null,
+      expiredAt: couponForm.value.expiredAt || null,
+    })
+    couponMsg.value = '쿠폰이 생성되었습니다.'; couponSuccess.value = true
+    couponForm.value = { code: '', name: '', discountRate: 10, minPrice: null, maxDiscount: null, expiredAt: '' }
+    await loadCoupons()
+  } catch (e) { couponMsg.value = e.response?.data?.message || '생성 실패'; couponSuccess.value = false }
+  finally { couponSaving.value = false }
+}
+
+async function grantCouponFn() {
+  if (!grantCouponId.value || !grantUserId.value) { grantMsg.value = '쿠폰과 사용자 ID를 입력해주세요.'; grantSuccess.value = false; return }
+  grantSaving.value = true; grantMsg.value = ''
+  try {
+    await couponApi.grantCoupon(grantCouponId.value, grantUserId.value)
+    grantMsg.value = '발급되었습니다.'; grantSuccess.value = true
+    grantCouponId.value = null; grantUserId.value = null
+  } catch (e) { grantMsg.value = e.response?.data?.message || '발급 실패'; grantSuccess.value = false }
+  finally { grantSaving.value = false }
+}
 
 </script>
 
@@ -294,6 +424,16 @@ function removeService(idx, svc) { if (svc.id && !svc.isNew) deletedServiceIds.v
 .msg-success { color: var(--success); font-size: 13px; margin-top: 8px; }
 .msg-error   { color: var(--danger); font-size: 13px; margin-top: 8px; }
 
+
+/* Coupon */
+.coupon-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.coupon-list-manage { display: flex; flex-direction: column; gap: 8px; }
+.coupon-row-manage { padding: 12px 14px; background: var(--bg-surface); border-radius: var(--radius-md); border: 1px solid var(--border); }
+.coupon-row-top { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.coupon-code-badge { font-size: 11px; font-weight: 700; background: var(--primary); color: #fff; padding: 2px 8px; border-radius: 20px; }
+.coupon-row-name { font-size: 14px; font-weight: 600; flex: 1; }
+.coupon-row-rate { font-size: 13px; font-weight: 700; color: var(--primary); }
+.coupon-row-meta { font-size: 12px; color: var(--text-muted); }
 
 @media (max-width: 768px) {
   .manage-layout { grid-template-columns: 1fr; }

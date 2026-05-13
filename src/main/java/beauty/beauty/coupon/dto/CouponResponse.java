@@ -33,6 +33,7 @@ public class CouponResponse {
 
     public static CouponResponse from(Coupon c) {
         return CouponResponse.builder()
+                .userCouponId(c.getId())
                 .code(c.getCode())
                 .name(c.getName())
                 .discountRate(c.getDiscountRate())

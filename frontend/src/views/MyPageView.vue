@@ -50,11 +50,11 @@
 
       <div class="menu-section card">
         <p class="section-label">혜택</p>
-        <button class="menu-item" @click="comingSoon">
+        <RouterLink to="/mypage/coupons" class="menu-item">
           <span class="menu-icon">🎟️</span>
           <span class="menu-title">쿠폰</span>
-          <span class="menu-badge-soon">준비 중</span>
-        </button>
+          <span class="menu-arrow">›</span>
+        </RouterLink>
         <button class="menu-item" @click="comingSoon">
           <span class="menu-icon">🎉</span>
           <span class="menu-title">이벤트</span>

@@ -53,6 +53,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { paymentApi } from '@/api/payment'
 import { reservationApi } from '@/api/reservation'
+import { couponApi } from '@/api/coupon'
 
 const route  = useRoute()
 const router = useRouter()
@@ -83,6 +84,11 @@ onMounted(async () => {
           orderId: orderId.value,
           amount: amount.value,
         })
+        const pendingCouponId = sessionStorage.getItem('pendingCouponId')
+        if (pendingCouponId) {
+          try { await couponApi.useCoupon(Number(pendingCouponId)) } catch {}
+          sessionStorage.removeItem('pendingCouponId')
+        }
       } catch (e) {
         const msg = e.response?.data?.message || ''
         // "이미 결제 완료" = 새로고침 재시도 → 그냥 결제 내역 조회로 이어감

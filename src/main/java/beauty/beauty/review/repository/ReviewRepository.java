@@ -34,7 +34,7 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     // recalculateRating 전용 — AVG + COUNT를 한 쿼리로
     @Query("SELECT AVG(r.rating), COUNT(r) FROM Review r WHERE r.stylistProfile.id = :stylistId")
-    Object[] calcRatingStats(@Param("stylistId") Long stylistId);
+    List<Object[]> calcRatingStats(@Param("stylistId") Long stylistId);
 
     // recalculateScore 단건용
     @Query("SELECT COUNT(r) FROM Review r WHERE r.stylistProfile.id = :stylistId")

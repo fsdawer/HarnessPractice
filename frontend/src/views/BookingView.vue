@@ -122,8 +122,24 @@
                 </div>
                 <div class="confirm-row total">
                   <span class="confirm-label">결제 금액</span>
-                  <span class="confirm-val price">{{ selectedService?.price?.toLocaleString() }}원</span>
+                  <span class="confirm-val price">
+                    <s v-if="discountAmount > 0" class="original-price">{{ selectedService?.price?.toLocaleString() }}원</s>
+                    {{ finalPrice.toLocaleString() }}원
+                  </span>
                 </div>
+              </div>
+
+              <!-- 쿠폰 선택 -->
+              <div v-if="coupons.length > 0" class="coupon-select-wrap">
+                <label class="form-label">쿠폰 적용</label>
+                <select v-model="selectedCouponId" class="form-input">
+                  <option :value="null">쿠폰 선택 안 함</option>
+                  <option v-for="c in coupons" :key="c.userCouponId" :value="c.userCouponId">
+                    {{ c.name }} ({{ c.discountRate }}%{{ c.maxDiscount ? ` · 최대 ${c.maxDiscount.toLocaleString()}원` : '' }})
+                  </option>
+                </select>
+                <p v-if="selectedCoupon && discountAmount > 0" class="coupon-applied-msg">{{ discountAmount.toLocaleString() }}원 할인 적용</p>
+                <p v-if="selectedCoupon && discountAmount === 0 && selectedCoupon.minPrice" class="coupon-hint-msg">최소 {{ selectedCoupon.minPrice.toLocaleString() }}원 이상 구매 시 적용됩니다.</p>
               </div>
 
               <p v-if="payError" class="err-msg">{{ payError }}</p>
@@ -134,7 +150,7 @@
                 @click="handlePay"
               >
                 <span v-if="paying" class="spinner" style="width:16px;height:16px;border-width:2px"></span>
-                <span v-else>{{ selectedService?.price?.toLocaleString() }}원 결제하기</span>
+                <span v-else>{{ finalPrice.toLocaleString() }}원 결제하기</span>
               </button>
             </template>
           </section>
@@ -209,6 +225,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { stylistApi } from '@/api/stylist'
 import { reservationApi, waitingApi } from '@/api/reservation'
 import { paymentApi } from '@/api/payment'
+import { couponApi } from '@/api/coupon'
 import { useAuthStore } from '@/stores/authStore'
 
 const route  = useRoute()
@@ -232,8 +249,20 @@ const paying         = ref(false)
 const payError       = ref('')
 const waitingModal   = ref({ show: false, time: '', loading: false, error: '' })
 const waitingSuccess = ref('')
+const coupons        = ref([])
+const selectedCouponId = ref(null)
 
 const selectedService = computed(() => services.value.find(s => s.id === selectedServiceId.value))
+const selectedCoupon  = computed(() => coupons.value.find(c => c.userCouponId === selectedCouponId.value))
+const discountAmount  = computed(() => {
+  const price = selectedService.value?.price
+  if (!price || !selectedCoupon.value) return 0
+  const c = selectedCoupon.value
+  if (c.minPrice && price < c.minPrice) return 0
+  const raw = Math.floor(price * c.discountRate / 100)
+  return c.maxDiscount ? Math.min(raw, c.maxDiscount) : raw
+})
+const finalPrice = computed(() => (selectedService.value?.price || 0) - discountAmount.value)
 
 const daysInMonth = computed(() => new Date(calYear.value, calMonth.value + 1, 0).getDate())
 const startBlank  = computed(() => new Date(calYear.value, calMonth.value, 1).getDay())
@@ -338,11 +367,17 @@ async function handlePay() {
     const prepRes = await paymentApi.prepare({ reservationId, method: 'TOSS' })
     const { orderId } = prepRes.data
 
+    if (selectedCouponId.value) {
+      sessionStorage.setItem('pendingCouponId', String(selectedCouponId.value))
+    } else {
+      sessionStorage.removeItem('pendingCouponId')
+    }
+
     const tossPayments = window.TossPayments(import.meta.env.VITE_TOSS_CLIENT_KEY)
     const payment = tossPayments.payment({ customerKey: window.TossPayments.ANONYMOUS })
     await payment.requestPayment({
       method: 'CARD',
-      amount: { currency: 'KRW', value: selectedService.value.price },
+      amount: { currency: 'KRW', value: finalPrice.value },
       orderId,
       orderName: selectedService.value.name,
       successUrl: `${window.location.origin}/payment/success`,
@@ -368,8 +403,8 @@ onMounted(async () => {
     services.value      = res.data.services      || []
     workingHours.value  = res.data.workingHours  || []
     if (route.query.time) selectedTime.value = route.query.time
-    // 위젯 초기화는 watch가 담당 (date+time+service 모두 설정된 후)
   } catch {}
+  try { coupons.value = (await couponApi.getMyCoupons()).data || [] } catch { coupons.value = [] }
 })
 </script>
 
@@ -482,6 +517,11 @@ onMounted(async () => {
 .widget-wrap { margin: 16px -24px 0; }
 #payment-widget { min-height: 50px; }
 #payment-agreement { }
+
+.original-price { font-size: 13px; font-weight: 400; opacity: 0.5; margin-right: 6px; }
+.coupon-select-wrap { margin-bottom: 16px; display: flex; flex-direction: column; gap: 6px; }
+.coupon-applied-msg { font-size: 13px; font-weight: 600; color: var(--success); }
+.coupon-hint-msg { font-size: 12px; color: var(--text-muted); }
 
 .err-msg { color: var(--danger); font-size: 13px; margin-top: 8px; padding: 10px 14px; background: var(--danger-light); border-radius: var(--radius-sm); }
 .pay-btn { margin-top: 16px; padding: 15px; font-size: 15px; }
