@@ -25,11 +25,12 @@ public class CouponController {
         return ResponseEntity.ok().build();
     }
 
-    // 특정 유저에게 쿠폰 발급 (미용사/관리자)
+    // 미용사가 자기 쿠폰을 특정 유저에게 발급
     @PostMapping("/{couponId}/grant/{targetUserId}")
-    public ResponseEntity<Void> grantCoupon(@PathVariable Long couponId,
+    public ResponseEntity<Void> grantCoupon(@LoginUserId Long requesterId,
+                                            @PathVariable Long couponId,
                                             @PathVariable Long targetUserId) {
-        couponService.grantCoupon(targetUserId, couponId);
+        couponService.grantCoupon(requesterId, targetUserId, couponId);
         return ResponseEntity.ok().build();
     }
 

@@ -157,7 +157,7 @@
                   <label class="form-label">쿠폰 선택</label>
                   <select v-model="grantCouponId" class="form-input">
                     <option :value="null" disabled>쿠폰을 선택하세요</option>
-                    <option v-for="c in couponList" :key="c.userCouponId" :value="c.userCouponId">{{ c.name }} ({{ c.discountRate }}%)</option>
+                    <option v-for="c in couponList" :key="c.couponId" :value="c.couponId">{{ c.name }} ({{ c.discountRate }}%)</option>
                   </select>
                 </div>
                 <div class="form-group">

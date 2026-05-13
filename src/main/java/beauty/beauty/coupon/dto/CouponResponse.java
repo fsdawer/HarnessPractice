@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
 @Builder
 public class CouponResponse {
 
-    private Long userCouponId;   // 쿠폰 사용 요청 시 식별자
+    private Long userCouponId;   // 쿠폰 사용 요청 시 식별자 (UserCoupon.id)
+    private Long couponId;       // 쿠폰 자체 식별자 (Coupon.id) — 미용사 발급 시 사용
     private String code;
     private String name;
     private Integer discountRate;
@@ -22,6 +23,7 @@ public class CouponResponse {
     public static CouponResponse from(UserCoupon uc) {
         return CouponResponse.builder()
                 .userCouponId(uc.getId())
+                .couponId(uc.getCoupon().getId())
                 .code(uc.getCoupon().getCode())
                 .name(uc.getCoupon().getName())
                 .discountRate(uc.getCoupon().getDiscountRate())
@@ -33,7 +35,8 @@ public class CouponResponse {
 
     public static CouponResponse from(Coupon c) {
         return CouponResponse.builder()
-                .userCouponId(c.getId())
+                .userCouponId(null)
+                .couponId(c.getId())
                 .code(c.getCode())
                 .name(c.getName())
                 .discountRate(c.getDiscountRate())

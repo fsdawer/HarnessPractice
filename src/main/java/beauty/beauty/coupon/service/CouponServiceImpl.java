@@ -48,25 +48,29 @@ public class CouponServiceImpl implements CouponService {
     }
 
 
-    // 관리자가 특정 유저에게 쿠폰 발급
+    // 미용사가 자기 쿠폰을 특정 유저에게 발급
     @Override
     @Transactional
-    public void grantCoupon(Long userId, Long couponId) {
-        if(userCouponRepository.existsByUserIdAndCouponId(userId, couponId)) {
+    public void grantCoupon(Long requesterId, Long targetUserId, Long couponId) {
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰"));
+
+        if (coupon.getStylist() == null
+                || !coupon.getStylist().getUser().getId().equals(requesterId)) {
+            throw new IllegalArgumentException("해당 쿠폰의 소유 미용사만 발급할 수 있습니다");
+        }
+
+        if (userCouponRepository.existsByUserIdAndCouponId(targetUserId, couponId)) {
             throw new IllegalArgumentException("이미 발급된 쿠폰입니다");
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자"));
-
-        Coupon coupon = couponRepository.findById(couponId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰"));
 
         userCouponRepository.save(UserCoupon.builder()
                         .user(user)
                         .coupon(coupon)
                         .build());
-
     }
 
 
