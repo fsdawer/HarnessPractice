@@ -18,7 +18,7 @@
                 @keyup.enter="search"
               />
               <input
-                v-model="locationQuery"
+                v-model="districtQuery"
                 class="search-input"
                 placeholder="지역 (예: 강남구)"
                 @keyup.enter="search"
@@ -27,7 +27,7 @@
             </div>
             <div class="search-actions">
               <div class="quick-tags">
-                <button v-for="tag in popularTags" :key="tag" class="tag-chip" @click="searchQuery = tag; search()">{{ tag }}</button>
+                <button v-for="tag in popularTags" :key="tag" class="tag-chip" @click="activeFilter = tag; search()">{{ tag }}</button>
               </div>
             </div>
           </div>
@@ -68,6 +68,16 @@
       <div v-else class="stylists-grid">
         <StylistCard v-for="s in sortedStylists" :key="s.id" :stylist="s" />
       </div>
+
+      <!-- AI 헤어 추천 배너 -->
+      <RouterLink to="/hair-analysis" class="ai-banner">
+        <div class="ai-banner-text">
+          <p class="ai-banner-eyebrow">✨ AI 기반 헤어 추천</p>
+          <p class="ai-banner-title">내 얼굴형에 맞는<br>헤어스타일 찾기</p>
+          <p class="ai-banner-desc">사진 한 장으로 얼굴형 분석 + 맞춤 스타일 추천</p>
+        </div>
+        <div class="ai-banner-cta">분석 시작 →</div>
+      </RouterLink>
 
       <!-- 랭킹 섹션 -->
       <section class="ranking-section">
@@ -122,13 +132,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import StylistCard from '@/components/StylistCard.vue'
 import { stylistApi } from '@/api/stylist'
 import { rankingApi } from '@/api/ranking'
 
 const searchQuery  = ref('')
-const locationQuery = ref('')
+const districtQuery = ref('')
 const activeFilter = ref('all')
 const sortBy       = ref('rating')
 const loading      = ref(false)
@@ -148,29 +158,26 @@ const filters = [
   { label: '클리닉', value: '클리닉' },
 ]
 
-const sortedStylists = computed(() => {
-  let list = [...stylists.value]
-  if (activeFilter.value !== 'all') {
-    list = list.filter(s => s.services?.some(sv => sv.category === activeFilter.value))
-  }
-  if (sortBy.value === 'rating') return list.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-  if (sortBy.value === 'review') return list.sort((a, b) => (b.reviewCount ?? 0) - (a.reviewCount ?? 0))
-  if (sortBy.value === 'exp')    return list.sort((a, b) => (b.experience ?? 0) - (a.experience ?? 0))
-  return list
-})
+const sortedStylists = computed(() => stylists.value)
 
 async function search() {
   loading.value = true
   try {
-    const res = await stylistApi.getStylists({ keyword: searchQuery.value, location: locationQuery.value })
+    const params = { keyword: searchQuery.value }
+    if (districtQuery.value) params.district = districtQuery.value
+    if (activeFilter.value !== 'all') params.category = activeFilter.value
+    if (sortBy.value) params.sort = sortBy.value
+    const res = await stylistApi.getStylists(params)
     stylists.value = res.data
   } catch { stylists.value = [] }
   finally { loading.value = false }
 }
 
+watch([activeFilter, sortBy], () => search())
+
 function resetSearch() {
   searchQuery.value = ''
-  locationQuery.value = ''
+  districtQuery.value = ''
   search()
 }
 
@@ -249,6 +256,20 @@ onMounted(() => { search(); loadRanking() })
 .stylists-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 48px; }
 
 /* Ranking Section */
+.ai-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(135deg, #7c5cef 0%, #a97cf8 100%);
+  border-radius: 20px; padding: 28px 32px; margin: 40px 0 0;
+  color: #fff; text-decoration: none; transition: opacity 0.2s;
+}
+.ai-banner:hover { opacity: 0.92; }
+.ai-banner-eyebrow { font-size: 0.8rem; font-weight: 600; opacity: 0.85; margin-bottom: 6px; }
+.ai-banner-title { font-size: 1.3rem; font-weight: 800; line-height: 1.3; margin-bottom: 8px; }
+.ai-banner-desc { font-size: 0.85rem; opacity: 0.8; }
+.ai-banner-cta {
+  flex-shrink: 0; background: rgba(255,255,255,0.2); border-radius: 12px;
+  padding: 10px 20px; font-size: 0.9rem; font-weight: 700; white-space: nowrap;
+}
 .ranking-section { padding-top: 40px; border-top: 1px solid var(--border); }
 .section-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
 

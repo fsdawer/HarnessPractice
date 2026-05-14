@@ -8,6 +8,7 @@ import beauty.beauty.stylist.entity.StylistServiceItem;
 import beauty.beauty.stylist.repository.OperatingHoursRepository;
 import beauty.beauty.stylist.repository.SalonRepository;
 import beauty.beauty.stylist.repository.StylistProfileRepository;
+import beauty.beauty.stylist.repository.StylistSearchSpec;
 import beauty.beauty.stylist.repository.StylistServiceRepository;
 import beauty.beauty.payment.entity.Payment;
 import beauty.beauty.payment.repository.PaymentRepository;
@@ -18,6 +19,8 @@ import beauty.beauty.global.kakao.KakaoGeocodingService;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.PrecisionModel;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -52,16 +55,22 @@ public class StylistServiceImpl implements StylistService {
     private static final GeometryFactory GEO_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Override
-    public List<StylistProfileResponse> getStylists(String keyword, String location) {
-        if (keyword != null && !keyword.isBlank()) {
-            String kwWildcard = keyword.trim() + "*";
-            List<Long> ids = stylistProfileRepository.searchStylistIdsByFulltext(kwWildcard, location);
-            if (ids.isEmpty()) return List.of();
-            return stylistProfileRepository.findByIdIn(ids)
-                    .stream().map(StylistProfileResponse::from).collect(Collectors.toList());
-        }
-        return stylistProfileRepository.searchStylists(location)
-                .stream().map(StylistProfileResponse::from).collect(Collectors.toList());
+    public List<StylistProfileResponse> getStylists(
+            String keyword, String district, String category,
+            Integer minPrice, Integer maxPrice, String sort) {
+
+        Specification<StylistProfile> spec = StylistSearchSpec.build(keyword, district, category, minPrice, maxPrice);
+
+        Sort sortOrder = switch (sort != null ? sort : "rating") {
+            case "review" -> Sort.by("reviewCount").descending();
+            case "exp"    -> Sort.by("experience").descending();
+            default       -> Sort.by("rating").descending();
+        };
+
+        return stylistProfileRepository.findAll(spec, sortOrder)
+                .stream()
+                .map(StylistProfileResponse::from)
+                .collect(Collectors.toList());
     }
 
     @Override

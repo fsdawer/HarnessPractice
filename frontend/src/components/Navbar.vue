@@ -10,6 +10,7 @@
         <li><RouterLink to="/" class="nav-link">홈</RouterLink></li>
         <li><RouterLink to="/nearby" class="nav-link">내 주변</RouterLink></li>
         <li><RouterLink to="/ranking" class="nav-link">랭킹</RouterLink></li>
+        <li><RouterLink to="/hair-analysis" class="nav-link nav-link--ai">AI 추천</RouterLink></li>
         <li v-if="auth.isStylist">
           <RouterLink to="/stylist/reservations" class="nav-link">예약 관리</RouterLink>
         </li>
@@ -80,6 +81,7 @@
         <RouterLink to="/" class="drawer-item" @click="mobileOpen = false">홈</RouterLink>
         <RouterLink to="/nearby" class="drawer-item" @click="mobileOpen = false">내 주변</RouterLink>
         <RouterLink to="/ranking" class="drawer-item" @click="mobileOpen = false">랭킹</RouterLink>
+        <RouterLink to="/hair-analysis" class="drawer-item drawer-item--ai" @click="mobileOpen = false">✨ AI 헤어 추천</RouterLink>
         <RouterLink v-if="auth.isStylist" to="/stylist/reservations" class="drawer-item" @click="mobileOpen = false">예약 관리</RouterLink>
         <RouterLink v-if="auth.isLoggedIn" to="/mypage" class="drawer-item" @click="mobileOpen = false">마이페이지</RouterLink>
         <template v-if="!auth.isLoggedIn">
@@ -152,6 +154,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 }
 .nav-link:hover { color: var(--text); background: var(--bg-surface); }
 .nav-link.router-link-exact-active { color: var(--primary); font-weight: 600; }
+.nav-link--ai { color: #7c5cef; font-weight: 600; }
+.nav-link--ai:hover { background: #f0ebff; color: #5a3eaa; }
 
 .nav-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .nav-user-wrap { display: flex; align-items: center; gap: 6px; }
@@ -240,6 +244,7 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .drawer-item:hover { background: var(--bg-surface); color: var(--text); }
 .drawer-item--primary { color: var(--primary); font-weight: 600; }
 .drawer-item--danger  { color: var(--danger); }
+.drawer-item--ai { color: #7c5cef; font-weight: 600; }
 
 .drawer-enter-active, .drawer-leave-active { transition: all 0.2s ease; overflow: hidden; }
 .drawer-enter-from, .drawer-leave-to { max-height: 0; opacity: 0; }

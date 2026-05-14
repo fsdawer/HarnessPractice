@@ -1,7 +1,11 @@
 package beauty.beauty.stylist.repository;
 
 import beauty.beauty.stylist.entity.StylistProfile;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,7 +14,10 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-public interface StylistProfileRepository extends JpaRepository<StylistProfile, Long> {
+public interface StylistProfileRepository extends JpaRepository<StylistProfile, Long>, JpaSpecificationExecutor<StylistProfile> {
+
+    @EntityGraph(attributePaths = {"user", "salon"})
+    List<StylistProfile> findAll(Specification<StylistProfile> spec, Sort sort);
 
     Optional<StylistProfile> findByUserId(Long userId);
 

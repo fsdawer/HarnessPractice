@@ -10,7 +10,9 @@ import beauty.beauty.stylist.dto.WorkingHoursResponse;
 import java.util.List;
 
 public interface StylistService {
-    List<StylistProfileResponse> getStylists(String keyword, String location);
+    List<StylistProfileResponse> getStylists(
+            String keyword, String district, String category,
+            Integer minPrice, Integer maxPrice, String sort);
 
     StylistProfileResponse getStylist(Long stylistId);
 

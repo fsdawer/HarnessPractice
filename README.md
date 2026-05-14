@@ -4,39 +4,80 @@ Spring Boot와 Vue.js 기반의 종합 미용실 뷰티 플랫폼입니다. 고�
 
 ## 주요 기능
 
-*   **고객용 기능**
-    *   스타일리스트 위치 기반 검색 및 필터링 기능
-    *   미용 서비스 예약 시스템 (원하는 날짜/시간 선택)
-    *   Toss Payments 기반 간편 결제 및 승인 (모의 결제 테스트 환경)
-    *   예약 관리 및 취소 기능
-*   **스타일리스트(미용사)용 관리 기능**
-    *   프로필 편집 (자기소개, 경력, 미용실 위치)
-    *   영업시간 및 휴무일 관리
-    *   제공 서비스 및 가격 관리 (추가, 수정, 삭제)
-    *   포트폴리오(작업 이미지) 관리
-    *   고객 예약 확인 및 승인/거절, 완료 시스템 처리
+- **고객용 기능**
+  - 키워드·지역·카테고리·가격 범위 다중 필터 서버사이드 검색 (JPA Specification)
+  - 미용 서비스 예약 시스템 (원하는 날짜/시간 선택)
+  - Toss Payments 기반 간편 결제 및 승인
+  - 예약 관리 및 취소 / 빈자리 알림 (WebSocket)
+  - AI 헤어스타일 궁합 분석 — 얼굴 사진 + 레퍼런스 헤어 사진을 동시에 분석해 궁합 점수·추천 스타일 제공
+- **스타일리스트(미용사)용 관리 기능**
+  - 프로필 편집 (자기소개, 경력, 미용실 위치)
+  - 영업시간·휴무일·제공 서비스 및 가격 관리
+  - 포트폴리오(작업 이미지) 관리
+  - 고객 예약 확인 및 승인/거절/완료 처리
+  - 실시간 지역별 랭킹 (Redis ZSET 베이지안 점수)
 
 ## 기술 스택
 
-*   **Backend:** Java 17, Spring Boot 3.2, Spring Security, Spring Data JPA, MySQL
-*   **Frontend:** Vue.js 3, Pinia, Vue Router, Vite
-*   **결제 연동:** Toss Payments SDK
-*   **소셜 로그인:** Kakao OAuth2 (지원 예정)
+| 분류 | 기술 |
+|---|---|
+| Backend | Java 17, Spring Boot 4.0.3, Spring Security, Spring Data JPA, MySQL |
+| Frontend | Vue.js 3, Pinia, Vue Router, Vite |
+| Cache / Broker | Redis (ZSET 랭킹, Pub/Sub 채팅, Streams 이벤트, 분산락) |
+| AI | Gemini Vision API (멀티모달 프롬프트 — 이미지 2장 동시 분석) |
+| 결제 | Toss Payments v2 |
+| 인증 | JWT, Spring Security, OAuth2 (Kakao / Naver) |
+| 실시간 | WebSocket (채팅, 빈자리 알림) |
 
 ## 실행 방법
 
-### Backend (Spring Boot)
 ```bash
-# /src/main/resources/application.yml (또는 환경변수)에서 DB 설정(MySQL) 필요
-./gradlew bootRun
+brew services start redis       # Redis 필수
+./gradlew bootRun               # 백엔드 :8080
+cd frontend && npm run dev      # 프론트 :5173
 ```
 
-### Frontend (Vue.js)
-```bash
-cd frontend
-npm install
-npm run dev
-```
+> `.env` 파일에 `DB_URL`, `JWT_SECRET`, `GEMINI_API_KEY`, `TOSS_SECRET_KEY` 등 환경변수 설정 필요
+
+---
+
+## AI 개발 워크플로우 (Claude Code 멀티에이전트)
+
+이 프로젝트는 **Claude Code의 에이전트·스킬·하네스 시스템**을 실제 개발 워크플로우에 통합해 운영했습니다.
+
+### 에이전트 구성 (`.claude/agents/`)
+
+기능 단위로 역할을 분리한 4개 전문 에이전트를 정의하고, 메인 Claude(팀장)가 태스크를 분배·통합합니다.
+
+| 에이전트 | 역할 | 제약 |
+|---|---|---|
+| `planner-agent` | 설계·태스크 분해. 구현 계획 수립 | 코드 수정 금지 |
+| `backend-agent` | Spring Boot + Vue.js 구현. git worktree 격리 작업 | worktree 필수 |
+| `test-agent` | 단위·통합 테스트 작성 및 실행 | `src/main/` 수정 금지 |
+| `review-agent` | 보안·성능·컨벤션 코드 리뷰 | 수정 금지, 리포트만 |
+
+**병합 조건:** `./gradlew test` 전체 통과 + review-agent PASS → `git merge --no-ff` → worktree 삭제
+
+### 스킬 시스템 (`.claude/skills/`)
+
+반복적으로 필요한 워크플로우를 재사용 가능한 스킬로 정의해 컨텍스트 효율을 높였습니다.
+
+| 스킬 | 목적 |
+|---|---|
+| `feature-implementation` | 설계→구현→테스트→리뷰 7단계 플로우 |
+| `bug-fix` | 재현→원인 분석→수정→회귀 테스트 플로우 |
+| `code-review` | 🔴 블로커 / 🟡 경고 / 🟢 제안 3단계 심각도 리뷰 |
+| `explain-code` | 입력→처리 플로우→출력 구조로 코드 설명 |
+| `db-access-guard` | DB 직접 접근 패턴 8가지 금지 규칙 가드 |
+| `portfolio-prep` | 면접 예상 질문 + 꼬리질문 체인 생성 |
+
+### 하네스(Harness) 활용
+
+- **SessionStart hook:** 매 세션마다 프로젝트 컨텍스트(기술 스택, 도메인 구조, 주의사항)를 자동 주입해 에이전트가 cold-start 없이 일관된 판단을 내릴 수 있도록 구성
+- **Auto memory:** 사용자 피드백·프로젝트 결정사항을 파일 기반 메모리에 지속 저장해 세션 간 컨텍스트 연속성 확보
+- **worktree 격리:** backend-agent는 반드시 별도 worktree에서 작업해 main 브랜치에 미완성 코드가 유입되는 것을 차단
+
+---
 
 ## 성능 개선 기록
 

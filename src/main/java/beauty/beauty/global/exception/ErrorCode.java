@@ -37,6 +37,10 @@ public enum ErrorCode {
     REVIEW_ALREADY_EXISTS(HttpStatus.CONFLICT,    "이미 리뷰를 작성했습니다."),
     REVIEW_NOT_FOUND(HttpStatus.NOT_FOUND,        "리뷰를 찾을 수 없습니다."),
 
+    // Hair Analysis
+    FACE_NOT_DETECTED(HttpStatus.BAD_REQUEST,     "얼굴을 인식할 수 없습니다. 얼굴이 잘 보이는 사진을 올려주세요."),
+    HAIR_ANALYSIS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI 분석에 실패했습니다. 잠시 후 다시 시도해주세요."),
+
     // Common
     FORBIDDEN(HttpStatus.FORBIDDEN,               "접근 권한이 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");

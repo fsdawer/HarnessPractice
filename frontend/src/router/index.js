@@ -30,6 +30,11 @@ const routes = [
     name: 'Ranking',
     component: () => import('@/views/RankingView.vue'),
   },
+  {
+    path: '/hair-analysis',
+    name: 'HairAnalysis',
+    component: () => import('@/views/HairAnalysisView.vue'),
+  },
   // 주의: /stylist/me, /stylist/manage, /stylist/reservations 등 정적 경로를 /:id 보다 먼저 선언
   {
     path: '/stylist/dashboard',

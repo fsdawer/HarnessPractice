@@ -98,6 +98,11 @@ server:
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY}
 
+# ── Gemini AI API ─────────────────────────────────────
+gemini:
+  api:
+    key: ${GEMINI_API_KEY}
+
 # ── Rate Limit ────────────────────────────────────────
 # k6 부하테스트 시 setup()에서 N번 로그인이 필요하므로 충분히 높게 설정
 # 운영 배포 시 10으로 낮출 것

@@ -26,9 +26,13 @@ public class StylistController {
     @GetMapping
     public ResponseEntity<List<StylistProfileResponse>> getStylists(
             @RequestParam(required = false) String keyword,
-            @RequestParam(required = false) String location) {
+            @RequestParam(required = false) String district,
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) Integer minPrice,
+            @RequestParam(required = false) Integer maxPrice,
+            @RequestParam(required = false) String sort) {
 
-        return ResponseEntity.ok(stylistService.getStylists(keyword, location));
+        return ResponseEntity.ok(stylistService.getStylists(keyword, district, category, minPrice, maxPrice, sort));
     }
 
     // GET  /api/stylists/nearby          위치 기반 주변 미용사 조회
