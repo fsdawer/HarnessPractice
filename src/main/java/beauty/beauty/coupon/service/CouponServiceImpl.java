@@ -6,11 +6,14 @@ import beauty.beauty.coupon.entity.Coupon;
 import beauty.beauty.coupon.entity.UserCoupon;
 import beauty.beauty.coupon.repository.CouponRepository;
 import beauty.beauty.coupon.repository.UserCouponRepository;
+import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.stylist.entity.StylistProfile;
 import beauty.beauty.stylist.repository.StylistProfileRepository;
 import beauty.beauty.user.entity.User;
 import beauty.beauty.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +36,7 @@ public class CouponServiceImpl implements CouponService {
     public void createCoupon(Long userId, IssueCouponRequest request) {
         // 미용사인지 검증
         StylistProfile stylistProfile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("미용사 프로필이 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         couponRepository.save(Coupon.builder()
                         .code(request.getCode())
@@ -53,29 +56,34 @@ public class CouponServiceImpl implements CouponService {
     @Transactional
     public void grantCoupon(Long requesterId, Long targetUserId, Long couponId) {
         Coupon coupon = couponRepository.findById(couponId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 쿠폰"));
+                .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
 
         if (coupon.getStylist() == null
                 || !coupon.getStylist().getUser().getId().equals(requesterId)) {
-            throw new IllegalArgumentException("해당 쿠폰의 소유 미용사만 발급할 수 있습니다");
+            throw new CustomException(ErrorCode.COUPON_NOT_OWNED);
         }
 
         if (userCouponRepository.existsByUserIdAndCouponId(targetUserId, couponId)) {
-            throw new IllegalArgumentException("이미 발급된 쿠폰입니다");
+            throw new CustomException(ErrorCode.COUPON_ALREADY_ISSUED);
         }
 
         User user = userRepository.findById(targetUserId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
-        userCouponRepository.save(UserCoupon.builder()
-                        .user(user)
-                        .coupon(coupon)
-                        .build());
+        try {
+            userCouponRepository.saveAndFlush(UserCoupon.builder()
+                            .user(user)
+                            .coupon(coupon)
+                            .build());
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomException(ErrorCode.COUPON_ALREADY_ISSUED);
+        }
     }
 
 
     // 내 쿠폰 목록 조회
     @Override
+    @Transactional(readOnly = true)
     public List<CouponResponse> getMyCoupons(Long userId) {
         return userCouponRepository.findValidCouponsByUserId(userId)
                 .stream()
@@ -86,10 +94,11 @@ public class CouponServiceImpl implements CouponService {
 
     // 미용사가 만든 쿠폰 목록 조회
     @Override
+    @Transactional(readOnly = true)
     public List<CouponResponse> getStylistCoupons(Long userId) {
 
         StylistProfile stylistProfile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("미용사 프로필이 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         return couponRepository.findByStylistIdOrderByCreatedAtDesc(stylistProfile.getId())
                 .stream()
@@ -104,7 +113,7 @@ public class CouponServiceImpl implements CouponService {
     @Transactional
     public void useCoupon(Long userId, Long userCouponId) {
         UserCoupon userCoupon = userCouponRepository.findValidOne(userCouponId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않거나 이미 사용된 쿠폰입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.COUPON_INVALID));
 
         userCoupon.use();
     }
@@ -114,12 +123,12 @@ public class CouponServiceImpl implements CouponService {
     @Override
     public int calculateDiscount(Long userId, Long userCouponId, int originalPrice) {
         UserCoupon userCoupon = userCouponRepository.findValidOne(userCouponId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 쿠폰입니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.COUPON_INVALID));
 
         Coupon coupon = userCoupon.getCoupon();
 
         if (originalPrice < coupon.getMinPrice()) {
-            throw new IllegalArgumentException("최소 결제 금액이 충족되지 않았습니다.");
+            throw new CustomException(ErrorCode.COUPON_MIN_PRICE_NOT_MET);
         }
 
         int discount = originalPrice * coupon.getDiscountRate() / 100;

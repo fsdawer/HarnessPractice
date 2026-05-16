@@ -1,6 +1,8 @@
 package beauty.beauty.reservation.event;
 
 import beauty.beauty.global.config.RedisStreamConfig;
+import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.notification.service.NotificationService;
 import beauty.beauty.ranking.service.RankingService;
 import beauty.beauty.reservation.entity.Reservation;
@@ -77,7 +79,7 @@ public class ReservationStreamListener implements StreamListener<String, MapReco
             // @Async 스레드에서 Lazy 연관관계 접근 시 LazyInitializationException 발생 방지
             Long reservationId = Long.parseLong(reservationIdStr);
             Reservation reservation = reservationRepository.findByIdWithNotificationData(reservationId)
-                    .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다. ID: " + reservationId));
+                    .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
             // [Flow 2] 타 도메인 로직 호출 - 1 (랭킹 갱신)
             try {

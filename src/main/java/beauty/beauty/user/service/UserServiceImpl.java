@@ -1,12 +1,13 @@
 package beauty.beauty.user.service;
 
+import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.user.dto.ChangePasswordRequest;
 import beauty.beauty.user.dto.UpdateUserRequest;
 import beauty.beauty.user.dto.UpgradeToStylistRequest;
 import beauty.beauty.user.dto.UserResponse;
 import beauty.beauty.user.entity.User;
 import beauty.beauty.user.repository.UserRepository;
-import jakarta.persistence.EntityNotFoundException;
 import beauty.beauty.stylist.entity.Salon;
 import beauty.beauty.stylist.entity.StylistProfile;
 import beauty.beauty.stylist.repository.SalonRepository;
@@ -69,12 +70,12 @@ public class UserServiceImpl implements UserService {
         // 1. 비밀변호 변경하기 위해 내 비밀번호를 입력한 데이터 = dto.getCurrentPassword
         // -> 입력한 비밀번호와 DB에 있는 비밀번호와 같은지 값 비교 = user.getPassword
         if (!passwordEncoder.matches(changePasswordRequest.getCurrentPassword(), user.getPassword())) {
-            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+            throw new CustomException(ErrorCode.PASSWORD_MISMATCH);
         }
 
         // 2. 새 비밀번호와 새 비밀번호 확인이 일치하는지 확인
         if (!changePasswordRequest.getNewPassword().equals(changePasswordRequest.getNewPasswordConfirm())) {
-            throw new IllegalArgumentException("새 비밀번호가 일치하지 않습니다.");
+            throw new CustomException(ErrorCode.NEW_PASSWORD_MISMATCH);
         }
 
         // 3. 새 비밀번호를 BCrypt로 해싱 후 저장
@@ -95,7 +96,7 @@ public class UserServiceImpl implements UserService {
         User user = findUserById(userId);
 
         if (user.getRole() == User.Role.STYLIST) {
-            throw new IllegalArgumentException("이미 미용사(STYLIST) 권한을 가지고 있습니다.");
+            throw new CustomException(ErrorCode.ALREADY_STYLIST);
         }
 
         // 1. 권한 변경
@@ -122,6 +123,6 @@ public class UserServiceImpl implements UserService {
     // ID 조회 공통 메서드
     private User findUserById(Long userId) {
         return userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 유저입니다. id=" + userId));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
     }
 }

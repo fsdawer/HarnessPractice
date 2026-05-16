@@ -41,7 +41,7 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional
     public ReviewResponse create(Long userId, ReviewRequest request) {
          Reservation reservation =  reservationRepository.findById(request.getReservationId())
-                 .orElseThrow(() -> new IllegalArgumentException("예약이 없습니다"));
+                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
          // 완료된 예약인지 확인
         if(reservation.getStatus() != Reservation.Status.DONE) {

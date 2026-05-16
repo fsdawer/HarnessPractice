@@ -1,6 +1,8 @@
 package beauty.beauty.stylist.controller;
 
 import beauty.beauty.global.annotation.LoginUserId;
+import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.stylist.entity.StylistDailyStat;
 import beauty.beauty.stylist.entity.StylistProfile;
 import beauty.beauty.stylist.repository.StylistDailyStatRepository;
@@ -31,7 +33,7 @@ public class DashboardController {
             @RequestParam String endDate) {
 
         StylistProfile profile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("미용사 권한이 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         // [Flow 3] 대시보드 조회
         // 클라이언트(앱)가 대시보드를 열었을 때, 무거운 예약 테이블을 JOIN/SUM 하지 않고

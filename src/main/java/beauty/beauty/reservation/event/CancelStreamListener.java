@@ -20,6 +20,7 @@ import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -74,6 +75,7 @@ public class CancelStreamListener implements StreamListener<String, MapRecord<St
     }
 
     @Override
+    @Transactional
     public void onMessage(MapRecord<String, String, String> message) {
         try {
             Map<String, String> value = message.getValue();

@@ -1,6 +1,8 @@
 package beauty.beauty.payment.service;
 
 import beauty.beauty.chat.service.ChatService;
+import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.payment.dto.*;
 import beauty.beauty.payment.entity.Payment;
 import beauty.beauty.payment.repository.PaymentRepository;
@@ -51,14 +53,14 @@ public class PaymentServiceImpl implements PaymentService {
 
         // [Flow 1] 결제 권한 및 예약 유효성 검증
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자가 아닙니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Reservation reservation = reservationRepository.findById(request.getReservationId())
-                .orElseThrow(() -> new IllegalArgumentException("해당 예약은 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         // 해당 예약이 내 예약인지 검증 (유저 조회에서 조회된 아이디가 예약 테이블 안에있는 아이디와 같은지)
         if(!reservation.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("본인의 예약만 결제할 수 있습니다.");
+            throw new CustomException(ErrorCode.NOT_MY_RESERVATION);
         }
 
         // 예약 ID로 기존 결제 내역이 있는지 조회
@@ -68,12 +70,12 @@ public class PaymentServiceImpl implements PaymentService {
                 .ifPresent(existingPayment -> {
                             // 이미 결제 완료(PAID) 상태라면 예외 발생
                             if (existingPayment.getStatus() == Payment.PayStatus.PAID) {
-                                throw new IllegalStateException("이미 결제가 완료된 예약입니다.");
+                                throw new CustomException(ErrorCode.PAYMENT_ALREADY_PAID);
                             }
 
                             // 환불된 건에 대해서도 재결제를 막고 싶다면 추가
                             if(existingPayment.getStatus() == Payment.PayStatus.REFUNDED) {
-                                throw new IllegalStateException("이미 환불 처리된 예약입니다.");
+                                throw new CustomException(ErrorCode.PAYMENT_ALREADY_REFUNDED);
                             }
 
                     // 결제창을 열었다가 닫아서 PENDING 상태로 남아있는 경우, 이전 내역은 삭제
@@ -121,18 +123,18 @@ public class PaymentServiceImpl implements PaymentService {
         // 금액 조작 방지를 위해, DB에 저장된 금액과 클라이언트가 보낸 금액이 일치하는지 트랜잭션 내에서 검증합니다.
         Payment validatedPayment = transactionTemplate.execute(status -> {
             Payment payment = paymentRepository.findByOrderId(request.getOrderId())
-                    .orElseThrow(() -> new IllegalArgumentException("결제 정보를 찾을 수 없습니다."));
+                    .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
             if (!payment.getReservation().getUser().getId().equals(userId)) {
-                throw new IllegalArgumentException("본인의 결제만 처리할 수 있습니다.");
+                throw new CustomException(ErrorCode.NOT_MY_PAYMENT);
             }
 
             if (payment.getStatus() == Payment.PayStatus.PAID) {
-                throw new IllegalStateException("이미 결제 완료된 건입니다.");
+                throw new CustomException(ErrorCode.PAYMENT_ALREADY_PAID);
             }
 
             if (payment.getAmount() != request.getAmount()) {
-                throw new IllegalArgumentException("결제 금액이 일치하지 않습니다.");
+                throw new CustomException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
             }
             return payment;
         });
@@ -158,12 +160,11 @@ public class PaymentServiceImpl implements PaymentService {
                 HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
                 if (response.statusCode() != 200) {
                     log.error("토스페이먼츠 승인 실패 [{}]: {}", response.statusCode(), response.body());
-                    throw new IllegalStateException("토스페이먼츠 승인 실패: " + response.body());
+                    throw new CustomException(ErrorCode.TOSS_API_FAILED);
                 }
             } catch (IOException | InterruptedException e) {
                 log.error("토스페이먼츠 통신 중 오류 발생", e);
-                Thread.currentThread().interrupt();
-                throw new RuntimeException("토스페이먼츠 API 호출 중 오류가 발생했습니다.", e);
+                throw new CustomException(ErrorCode.TOSS_API_FAILED);
             }
         } else {
             log.info("[개발 모드] mock paymentKey 감지 — Toss API 호출 생략: {}", request.getPaymentKey());
@@ -198,14 +199,14 @@ public class PaymentServiceImpl implements PaymentService {
         // 1. [DB 트랜잭션 O] 환불 사전 검증
         Payment validatedPayment = transactionTemplate.execute(status -> {
             Payment payment = paymentRepository.findById(paymentId)
-                    .orElseThrow(() -> new IllegalArgumentException("결제 정보를 찾을 수 없습니다."));
+                    .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
 
             if (!payment.getReservation().getUser().getId().equals(userId)) {
-                throw new IllegalStateException("본인의 결제만 환불할 수 있습니다.");
+                throw new CustomException(ErrorCode.NOT_MY_PAYMENT);
             }
 
             if (payment.getStatus() != Payment.PayStatus.PAID) {
-                throw new IllegalStateException("결제 완료 상태인 건만 환불할 수 있습니다.");
+                throw new CustomException(ErrorCode.REFUND_NOT_ALLOWED);
             }
             return payment;
         });
@@ -227,12 +228,11 @@ public class PaymentServiceImpl implements PaymentService {
             HttpResponse<String> response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
                 log.error("토스페이먼츠 환불 실패 [{}]: {}", response.statusCode(), response.body());
-                throw new IllegalStateException("토스페이먼츠 환불 실패: " + response.body());
+                throw new CustomException(ErrorCode.TOSS_API_FAILED);
             }
         } catch (IOException | InterruptedException e) {
             log.error("토스페이먼츠 환불 통신 중 오류 발생", e);
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("토스페이먼츠 API 호출 중 오류가 발생했습니다.", e);
+            throw new CustomException(ErrorCode.TOSS_API_FAILED);
         }
         
         // 3. [DB 트랜잭션 O] 상태 업데이트
@@ -287,10 +287,10 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional(readOnly = true)
     public PaymentResponse getByOrderId(Long userId, String orderId) {
         Payment payment = paymentRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("결제 내역을 찾을 수 없습니다: " + orderId));
+                .orElseThrow(() -> new CustomException(ErrorCode.PAYMENT_NOT_FOUND));
         // 본인 결제인지 검증
         if (!payment.getReservation().getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("본인의 결제 내역이 아닙니다.");
+            throw new CustomException(ErrorCode.NOT_MY_PAYMENT);
         }
         return PaymentResponse.from(payment);
     }
