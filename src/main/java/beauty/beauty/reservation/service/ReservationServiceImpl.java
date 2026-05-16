@@ -396,6 +396,7 @@ public class ReservationServiceImpl implements ReservationService {
     // 캐시 키 예) "booked_times::1:2026-05-10" → ["10:00","11:00"] 저장
     // createReservation / cancelReservation 이 일어나면 해당 키를 삭제하므로 항상 최신 데이터
     @Override
+    @Transactional(readOnly = true)
     @Cacheable(value = "booked_times", key = "#stylistId + ':' + #date")
     public List<String> getStylistBookedTimes(Long stylistId, String date) {
         LocalDate parsedDate = LocalDate.parse(date);

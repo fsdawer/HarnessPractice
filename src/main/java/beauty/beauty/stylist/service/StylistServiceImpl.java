@@ -56,6 +56,7 @@ public class StylistServiceImpl implements StylistService {
     private static final GeometryFactory GEO_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Override
+    @Transactional(readOnly = true)
     public List<StylistProfileResponse> getStylists(
             String keyword, String district, String category,
             Integer minPrice, Integer maxPrice, String sort) {
@@ -75,6 +76,7 @@ public class StylistServiceImpl implements StylistService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public StylistProfileResponse getStylist(Long stylistId) {
         StylistProfile profile = stylistProfileRepository.findById(stylistId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
@@ -82,6 +84,7 @@ public class StylistServiceImpl implements StylistService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public StylistProfileResponse getMyProfile(Long userId) {
         StylistProfile profile = stylistProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
@@ -145,6 +148,7 @@ public class StylistServiceImpl implements StylistService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<StylistProfileResponse> getNearbyStylists(double lat, double lng, int radius) {
         List<Long> ids = stylistProfileRepository.findNearbyIds(lat, lng, radius);
         if (ids.isEmpty()) return List.of();
@@ -271,6 +275,7 @@ public class StylistServiceImpl implements StylistService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public StylistDashboardResponse getDashboard(Long userId) {
         StylistProfile profile = stylistProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));

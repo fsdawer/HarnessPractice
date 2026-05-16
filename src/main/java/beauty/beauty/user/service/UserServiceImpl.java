@@ -32,6 +32,7 @@ public class UserServiceImpl implements UserService {
 
     // GET  /api/users/me               내 정보 조회
     @Override
+    @Transactional(readOnly = true)
     public UserResponse selectMyInformation(Long userId) {
         User user = findUserById(userId);
         return UserResponse.from(user);

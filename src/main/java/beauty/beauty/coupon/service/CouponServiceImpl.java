@@ -121,6 +121,7 @@ public class CouponServiceImpl implements CouponService {
 
     // 할인 금액 계산
     @Override
+    @Transactional(readOnly = true)
     public int calculateDiscount(Long userId, Long userCouponId, int originalPrice) {
         UserCoupon userCoupon = userCouponRepository.findValidOne(userCouponId, userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.COUPON_INVALID));
