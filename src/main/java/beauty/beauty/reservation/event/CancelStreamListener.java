@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -96,13 +97,13 @@ public class CancelStreamListener implements StreamListener<String, MapRecord<St
                 waitingPage = waitingRepository.findByStylistProfileIdAndWaitingDateAndWaitingTime(
                         stylistId, date, time, pageable);
 
-                for (Waiting waiting : waitingPage.getContent()) {
+                List<Waiting> chunk = waitingPage.getContent();
+                for (Waiting waiting : chunk) {
                     // [Flow 2] WebSocket 알림 발송
                     notificationService.notifyWaitingAvailable(waiting.getUser().getId(), date, time);
-
-                    // 1회성 알림 정책에 따라 전송 완료 후 대기열에서 즉시 제거
-                    waitingRepository.delete(waiting);
                 }
+                // 1회성 알림 정책에 따라 전송 완료 후 청크 전체를 한 번에 삭제
+                waitingRepository.deleteAllInBatch(chunk);
                 page++;
             } while (waitingPage.hasNext());
 

@@ -86,7 +86,7 @@ public class ReservationServiceImpl implements ReservationService {
         // DB 커넥션을 점유하지 않은 상태(@Transactional 밖)에서 Redis 서버와 먼저 통신하여
         // 락을 획득하지 못하면 즉시 예외를 던지고 종료시킵니다. (커넥션 고갈 방지)
         String lockKey = "lock:reservation:" + request.getStylistId() + ":" + request.getReservedAt();
-        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", 5, TimeUnit.SECONDS);
+        Boolean acquired = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", 10, TimeUnit.SECONDS);
         if (!Boolean.TRUE.equals(acquired)) {
             throw new CustomException(ErrorCode.ALREADY_RESERVED);
         }

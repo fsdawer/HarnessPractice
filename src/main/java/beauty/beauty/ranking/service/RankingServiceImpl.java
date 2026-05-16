@@ -11,6 +11,7 @@ import beauty.beauty.stylist.repository.StylistProfileRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -31,6 +33,7 @@ public class RankingServiceImpl implements RankingService {
     private final ReviewRepository reviewRepository;
     private final ReservationRepository reservationRepository;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate stringRedisTemplate;
 
     private static final String RANKING_KEY_PREFIX = "ranking:";
     private static final int TOP_N = 10;
@@ -105,26 +108,35 @@ public class RankingServiceImpl implements RankingService {
     @Override
     @Transactional(readOnly = true)
     public void recalculateScore(Long stylistProfileId) {
-        StylistProfile stylistProfile = stylistProfileRepository.findById(stylistProfileId)
-                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
+        String lockKey = "lock:ranking:" + stylistProfileId;
+        Boolean acquired = stringRedisTemplate.opsForValue()
+                .setIfAbsent(lockKey, "1", 3, TimeUnit.SECONDS);
+        if (!acquired) {
+            log.debug("[Ranking] 락 획득 실패, 스킵 — stylistId={}", stylistProfileId);
+            return;
+        }
+        try {
+            StylistProfile stylistProfile = stylistProfileRepository.findById(stylistProfileId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
-        int reviewCount = reviewRepository.countByStylistProfileId(stylistProfile.getId());
+            int reviewCount = reviewRepository.countByStylistProfileId(stylistProfile.getId());
 
-        LocalDateTime since = LocalDateTime.now().minusDays(30);
-        List<Reservation.Status> validStatuses = List.of(Reservation.Status.CONFIRMED, Reservation.Status.DONE);
-        long recentBookings = reservationRepository.countByStylistProfileIdAndReservedAtAfterAndStatusIn(
-                stylistProfile.getId(), since, validStatuses);
+            LocalDateTime since = LocalDateTime.now().minusDays(30);
+            List<Reservation.Status> validStatuses = List.of(Reservation.Status.CONFIRMED, Reservation.Status.DONE);
+            long recentBookings = reservationRepository.countByStylistProfileIdAndReservedAtAfterAndStatusIn(
+                    stylistProfile.getId(), since, validStatuses);
 
-        // 리뷰 수, 평균 평점, 최근 예약 수로 베이지안 점수 계산
-        double score = computeBayesianScore(
-                reviewCount, stylistProfile.getRating().doubleValue(), (int) recentBookings);
+            double score = computeBayesianScore(
+                    reviewCount, stylistProfile.getRating().doubleValue(), (int) recentBookings);
 
-        // Redis ZSET "ranking:{district}"에 해당 미용사 점수 갱신
-        String district = stylistProfile.getSalon() != null ? stylistProfile.getSalon().getDistrict() : null;
-        if (district != null) {
-            String key = RANKING_KEY_PREFIX + district;
-            redisTemplate.opsForZSet().add(key, String.valueOf(stylistProfile.getId()), score);
-            log.debug("[Ranking] ZADD — stylistId={}, district={}, score={}", stylistProfile.getId(), district, score);
+            String district = stylistProfile.getSalon() != null ? stylistProfile.getSalon().getDistrict() : null;
+            if (district != null) {
+                String key = RANKING_KEY_PREFIX + district;
+                redisTemplate.opsForZSet().add(key, String.valueOf(stylistProfile.getId()), score);
+                log.debug("[Ranking] ZADD — stylistId={}, district={}, score={}", stylistProfile.getId(), district, score);
+            }
+        } finally {
+            stringRedisTemplate.delete(lockKey);
         }
     }
 
