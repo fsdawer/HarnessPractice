@@ -2,7 +2,9 @@ package beauty.beauty.reservation.service;
 
 import beauty.beauty.chat.entity.ChatRoom;
 import beauty.beauty.chat.repository.ChatRoomRepository;
-import beauty.beauty.chat.service.ChatServiceImpl;
+import beauty.beauty.chat.service.ChatService;
+import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.reservation.dto.CursorResponse;
 import beauty.beauty.reservation.dto.ReservationRequest;
 import beauty.beauty.reservation.dto.ReservationResponse;
@@ -63,7 +65,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationImageRepository reservationImageRepository;
     private final OperatingHoursRepository operatingHoursRepository;
-    private final ChatServiceImpl chatService;
+    private final ChatService chatService;
     private final ChatRoomRepository chatRoomRepository;
     // [AFTER] 이벤트 기반 비동기 처리
     private final StringRedisTemplate stringRedisTemplate;
@@ -86,7 +88,7 @@ public class ReservationServiceImpl implements ReservationService {
         String lockKey = "lock:reservation:" + request.getStylistId() + ":" + request.getReservedAt();
         Boolean acquired = redisTemplate.opsForValue().setIfAbsent(lockKey, "1", 5, TimeUnit.SECONDS);
         if (!Boolean.TRUE.equals(acquired)) {
-            throw new IllegalStateException("해당 시간에는 이미 예약이 차있습니다. 다른 시간을 선택해주세요.");
+            throw new CustomException(ErrorCode.ALREADY_RESERVED);
         }
 
         try {
@@ -95,16 +97,16 @@ public class ReservationServiceImpl implements ReservationService {
             // 최대한 짧은 시간 동안만 DB 커넥션을 꺼내 쓰고 즉시 반납합니다.
             return transactionTemplate.execute(status -> {
                 User user = userRepository.findById(userId)
-                        .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+                        .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
                 StylistProfile stylist = stylistProfileRepository.findById(request.getStylistId())
-                        .orElseThrow(() -> new IllegalArgumentException("미용사를 찾을 수 없습니다."));
+                        .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_NOT_FOUND));
 
                 StylistServiceItem stylistServiceItem = serviceRepository.findById(request.getServiceId())
-                        .orElseThrow(() -> new IllegalArgumentException("해당 서비스를 찾을 수 없습니다."));
+                        .orElseThrow(() -> new CustomException(ErrorCode.SERVICE_NOT_FOUND));
 
                 if (!stylistServiceItem.getStylistProfile().getId().equals(stylist.getId())) {
-                    throw new IllegalArgumentException("해당 미용사가 제공하는 서비스가 아닙니다.");
+                    throw new CustomException(ErrorCode.SERVICE_NOT_OWNED);
                 }
 
                 LocalDateTime reservedAt = request.getReservedAt();
@@ -113,15 +115,14 @@ public class ReservationServiceImpl implements ReservationService {
 
                 OperatingHours hours = operatingHoursRepository
                         .findByStylistProfileIdAndDayOfWeek(stylist.getId(), dayOfWeekValue)
-                        .orElseThrow(() -> new IllegalArgumentException("해당 요일의 영업시간 정보가 설정되지 않았습니다."));
+                        .orElseThrow(() -> new CustomException(ErrorCode.OPERATING_HOURS_NOT_FOUND));
 
                 if (hours.isClosed()) {
-                    throw new IllegalArgumentException("해당 예약일은 휴무일입니다.");
+                    throw new CustomException(ErrorCode.HOLIDAY);
                 }
 
                 if (requestedTime.isBefore(hours.getOpenTime()) || requestedTime.isAfter(hours.getCloseTime())) {
-                    throw new IllegalStateException("영업시간 외에는 예약할 수 없습니다. (영업시간: "
-                            + hours.getOpenTime() + " ~ " + hours.getCloseTime() + ")");
+                    throw new CustomException(ErrorCode.OUTSIDE_OPERATING_HOURS);
                 }
 
                 boolean isBooked = reservationRepository.existsByStylistProfileIdAndReservedAtAndStatusIn(
@@ -131,7 +132,7 @@ public class ReservationServiceImpl implements ReservationService {
                 );
 
                 if (isBooked) {
-                    throw new IllegalStateException("해당 시간에는 이미 예약이 차있습니다. 다른 시간을 선택해주세요.");
+                    throw new CustomException(ErrorCode.ALREADY_RESERVED);
                 }
 
                 Reservation reservation = Reservation.builder()
@@ -183,10 +184,10 @@ public class ReservationServiceImpl implements ReservationService {
     @Transactional
     public void uploadImages(Long userId, Long reservationId, List<MultipartFile> files) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         if (!reservation.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("본인의 예약에만 이미지를 첨부할 수 있습니다.");
+            throw new CustomException(ErrorCode.NOT_MY_RESERVATION);
         }
 
         for (MultipartFile file : files) {
@@ -212,7 +213,7 @@ public class ReservationServiceImpl implements ReservationService {
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
             return "/uploads/reservation-images/" + filename;
         } catch (IOException e) {
-            throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
+            throw new CustomException(ErrorCode.FILE_SAVE_FAILED);
         }
     }
 
@@ -255,13 +256,13 @@ public class ReservationServiceImpl implements ReservationService {
     @Transactional(readOnly = true)
     public ReservationResponse getReservationById(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         boolean isMyReservation = reservation.getUser().getId().equals(userId);
         boolean isMyStylistReservation = reservation.getStylistProfile().getUser().getId().equals(userId);
 
         if (!isMyReservation && !isMyStylistReservation) {
-            throw new IllegalArgumentException("해당 예약 정보를 볼 권한이 없습니다.");
+            throw new CustomException(ErrorCode.NOT_MY_RESERVATION);
         }
 
         Long chatRoomId = chatRoomRepository.findByReservationId(reservationId)
@@ -281,15 +282,15 @@ public class ReservationServiceImpl implements ReservationService {
     @CacheEvict(value = "booked_times", allEntries = true)
     public void cancelReservation(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         if (!reservation.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("본인의 예약만 취소할 수 있습니다");
+            throw new CustomException(ErrorCode.NOT_MY_RESERVATION);
         }
 
         if (reservation.getStatus() != Reservation.Status.CONFIRMED
                 && reservation.getStatus() != Reservation.Status.PENDING) {
-            throw new IllegalArgumentException("대기 또는 확정 상태인 예약만 취소할 수 있습니다.");
+            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
         }
 
         reservation.setStatus(Reservation.Status.CANCELLED);
@@ -323,7 +324,7 @@ public class ReservationServiceImpl implements ReservationService {
     @Transactional(readOnly = true)
     public CursorResponse<ReservationResponse> getStylistReservations(Long userId, Long lastId, int size) {
         StylistProfile stylistProfile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("미용사 프로필이 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         List<Reservation> rows = reservationRepository.findByStylistProfileIdCursor(
                 stylistProfile.getId(), lastId, PageRequest.of(0, size + 1));
@@ -346,31 +347,31 @@ public class ReservationServiceImpl implements ReservationService {
     @Transactional
     public void updateReservationStatus(Long userId, Long reservationId, String status) {
         StylistProfile stylistProfile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new IllegalArgumentException("미용사 프로필이 없습니다"));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new IllegalArgumentException("예약을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
         if (!reservation.getStylistProfile().getId().equals(stylistProfile.getId())) {
-            throw new IllegalArgumentException("본인에게 들어온 예약만 상태를 변경할 수 있습니다.");
+            throw new CustomException(ErrorCode.NOT_MY_RESERVATION);
         }
 
         Reservation.Status newStatus;
         try {
             newStatus = Reservation.Status.valueOf(status.toUpperCase());
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("유효하지 않은 예약 상태입니다.");
+            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
         }
 
         if (reservation.getStatus() == Reservation.Status.CANCELLED
                 || reservation.getStatus() == Reservation.Status.DONE) {
-            throw new IllegalStateException("이미 종료된 예약은 상태를 변경할 수 없습니다.");
+            throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
         }
 
         if (newStatus == Reservation.Status.DONE) {
             LocalDateTime serviceEnd = reservation.getReservedAt().plusMinutes(reservation.getService().getDuration());
             if(LocalDateTime.now().isBefore(serviceEnd)) {
-                throw new IllegalStateException("아직 시술이 끝나지 않은 예약은 완료 처리 할 수 없습니다");
+                throw new CustomException(ErrorCode.INVALID_RESERVATION_STATUS);
             }
         }
 

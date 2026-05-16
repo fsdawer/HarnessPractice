@@ -15,6 +15,8 @@ import beauty.beauty.payment.repository.PaymentRepository;
 import beauty.beauty.reservation.entity.Reservation;
 import beauty.beauty.reservation.repository.ReservationRepository;
 import beauty.beauty.review.repository.ReviewRepository;
+import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.global.kakao.KakaoGeocodingService;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
@@ -22,7 +24,6 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -76,14 +77,14 @@ public class StylistServiceImpl implements StylistService {
     @Override
     public StylistProfileResponse getStylist(Long stylistId) {
         StylistProfile profile = stylistProfileRepository.findById(stylistId)
-                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 미용사 프로필입니다. id=" + stylistId));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
         return getDetailedProfileResponse(profile);
     }
 
     @Override
     public StylistProfileResponse getMyProfile(Long userId) {
         StylistProfile profile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 유저의 미용사 프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
         return getDetailedProfileResponse(profile);
     }
 
@@ -118,7 +119,7 @@ public class StylistServiceImpl implements StylistService {
     @Transactional
     public StylistProfileResponse updateProfile(Long userId, UpdateStylistProfileRequest request) {
         StylistProfile profile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 유저의 미용사 프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         if (request.getBio() != null) profile.setBio(request.getBio());
         if (request.getExperience() != null) profile.setExperience(request.getExperience());
@@ -163,7 +164,7 @@ public class StylistServiceImpl implements StylistService {
     @Transactional
     public ServiceResponse addService(Long userId, ServiceRequest request) {
         StylistProfile profile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 유저의 미용사 프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         StylistServiceItem serviceItem = StylistServiceItem.builder()
                 .stylistProfile(profile)
@@ -190,13 +191,13 @@ public class StylistServiceImpl implements StylistService {
     @Transactional
     public ServiceResponse updateService(Long userId, Long serviceId, ServiceRequest request) {
         StylistProfile profile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 유저의 미용사 프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         StylistServiceItem serviceItem = stylistServiceRepository.findById(serviceId)
-                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 서비스입니다. id=" + serviceId));
+                .orElseThrow(() -> new CustomException(ErrorCode.SERVICE_NOT_FOUND));
 
         if (!serviceItem.getStylistProfile().getId().equals(profile.getId())) {
-            throw new IllegalArgumentException("해당 서비스를 수정할 권한이 없습니다.");
+            throw new CustomException(ErrorCode.SERVICE_NOT_AUTHORIZED);
         }
 
         serviceItem.update(
@@ -223,13 +224,13 @@ public class StylistServiceImpl implements StylistService {
     @Transactional
     public void deleteService(Long userId, Long serviceId) {
         StylistProfile profile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 유저의 미용사 프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         StylistServiceItem serviceItem = stylistServiceRepository.findById(serviceId)
-                .orElseThrow(() -> new EntityNotFoundException("존재하지 않는 서비스입니다. id=" + serviceId));
+                .orElseThrow(() -> new CustomException(ErrorCode.SERVICE_NOT_FOUND));
 
         if (!serviceItem.getStylistProfile().getId().equals(profile.getId())) {
-            throw new IllegalArgumentException("해당 서비스를 수정할 권한이 없습니다.");
+            throw new CustomException(ErrorCode.SERVICE_NOT_AUTHORIZED);
         }
 
         serviceItem.setActive(false);
@@ -240,7 +241,7 @@ public class StylistServiceImpl implements StylistService {
     @Transactional
     public WorkingHoursResponse updateHours(Long userId, WorkingHoursRequest request) {
         StylistProfile profile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 유저의 미용사 프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         OperatingHours operatingHours = operatingHoursRepository
                 .findByStylistProfileIdAndDayOfWeek(profile.getId(), request.getDayOfWeek())
@@ -272,7 +273,7 @@ public class StylistServiceImpl implements StylistService {
     @Override
     public StylistDashboardResponse getDashboard(Long userId) {
         StylistProfile profile = stylistProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 유저의 미용사 프로필을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
         Long stylistId = profile.getId();
 
         LocalDate today = LocalDate.now();

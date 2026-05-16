@@ -7,6 +7,8 @@ import beauty.beauty.chat.entity.ChatRoom;
 import beauty.beauty.chat.entity.Message;
 import beauty.beauty.chat.repository.ChatRoomRepository;
 import beauty.beauty.chat.repository.MessageRepository;
+import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.reservation.entity.Reservation;
 import beauty.beauty.stylist.repository.StylistProfileRepository;
 import beauty.beauty.user.entity.User;
@@ -111,7 +113,7 @@ public class ChatServiceImpl implements ChatService {
         checkAccess(userId, room);
 
         User sender = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 
         Message saved = messageRepository.save(Message.builder()
                 .chatRoom(room)
@@ -154,14 +156,14 @@ public class ChatServiceImpl implements ChatService {
 
     private ChatRoom findRoomOrThrow(Long roomId) {
         return chatRoomRepository.findById(roomId)
-                .orElseThrow(() -> new IllegalArgumentException("채팅방을 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.CHAT_ROOM_NOT_FOUND));
     }
 
     private void checkAccess(Long userId, ChatRoom room) {
         boolean isUser    = room.getUser().getId().equals(userId);
         boolean isStylist = room.getStylistUser().getId().equals(userId);
         if (!isUser && !isStylist) {
-            throw new IllegalArgumentException("채팅방에 접근 권한이 없습니다.");
+            throw new CustomException(ErrorCode.CHAT_ROOM_ACCESS_DENIED);
         }
     }
 }

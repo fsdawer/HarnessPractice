@@ -1,5 +1,7 @@
 package beauty.beauty.ranking.service;
 
+import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.ranking.dto.RankingResponse;
 import beauty.beauty.reservation.entity.Reservation;
 import beauty.beauty.reservation.repository.ReservationRepository;
@@ -104,7 +106,7 @@ public class RankingServiceImpl implements RankingService {
     @Transactional(readOnly = true)
     public void recalculateScore(Long stylistProfileId) {
         StylistProfile stylistProfile = stylistProfileRepository.findById(stylistProfileId)
-                .orElseThrow(() -> new IllegalArgumentException("미용사 프로필을 찾을 수 없습니다: " + stylistProfileId));
+                .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
 
         int reviewCount = reviewRepository.countByStylistProfileId(stylistProfile.getId());
 
