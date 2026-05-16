@@ -26,6 +26,7 @@ public class ReservationReminderScheduler {
 
     private final ReservationRepository reservationRepository;
     private final NotificationService   notificationService;
+    private final org.springframework.data.redis.core.StringRedisTemplate stringRedisTemplate;
 
     @Scheduled(cron = "0 0 * * * *")
     public void sendReminders() {
@@ -37,7 +38,12 @@ public class ReservationReminderScheduler {
                 now.plusHours(24).plusMinutes(30),
                 Reservation.Status.CONFIRMED
         );
-        dayBefore.forEach(r -> notificationService.sendReminderAsync(r, "1D"));
+        dayBefore.forEach(r -> {
+            String key = "sent:reminder:" + r.getId() + ":1D";
+            if (Boolean.TRUE.equals(stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 25, java.util.concurrent.TimeUnit.HOURS))) {
+                notificationService.sendReminderAsync(r, "1D");
+            }
+        });
         if (!dayBefore.isEmpty())
             log.info("[리마인더] 24시간 전 알림 {}건 발송", dayBefore.size());
 
@@ -47,7 +53,12 @@ public class ReservationReminderScheduler {
                 now.plusMinutes(90),
                 Reservation.Status.CONFIRMED
         );
-        hourBefore.forEach(r -> notificationService.sendReminderAsync(r, "1H"));
+        hourBefore.forEach(r -> {
+            String key = "sent:reminder:" + r.getId() + ":1H";
+            if (Boolean.TRUE.equals(stringRedisTemplate.opsForValue().setIfAbsent(key, "1", 2, java.util.concurrent.TimeUnit.HOURS))) {
+                notificationService.sendReminderAsync(r, "1H");
+            }
+        });
         if (!hourBefore.isEmpty())
             log.info("[리마인더] 1시간 전 알림 {}건 발송", hourBefore.size());
     }
