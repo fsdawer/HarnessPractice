@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
     @Index(name = "idx_stylist_rating", columnList = "rating"),
     // 리뷰순 정렬: ORDER BY review_count DESC
     @Index(name = "idx_stylist_review_count", columnList = "review_count"),
+    // 랭킹 조회 / 지역 필터: WHERE district = ?
+    @Index(name = "idx_stylist_district", columnList = "district"),
 })
 @SQLRestriction("deleted_at IS NULL")
 @Getter @Setter
