@@ -10,6 +10,7 @@
         <li><RouterLink to="/" class="nav-link">홈</RouterLink></li>
         <li><RouterLink to="/nearby" class="nav-link">내 주변</RouterLink></li>
         <li><RouterLink to="/ranking" class="nav-link">랭킹</RouterLink></li>
+        <li><RouterLink to="/community" class="nav-link">커뮤니티</RouterLink></li>
         <li><RouterLink to="/hair-analysis" class="nav-link nav-link--ai">AI 추천</RouterLink></li>
         <li v-if="auth.isStylist">
           <RouterLink to="/stylist/reservations" class="nav-link">예약 관리</RouterLink>
@@ -81,6 +82,7 @@
         <RouterLink to="/" class="drawer-item" @click="mobileOpen = false">홈</RouterLink>
         <RouterLink to="/nearby" class="drawer-item" @click="mobileOpen = false">내 주변</RouterLink>
         <RouterLink to="/ranking" class="drawer-item" @click="mobileOpen = false">랭킹</RouterLink>
+        <RouterLink to="/community" class="drawer-item" @click="mobileOpen = false">커뮤니티</RouterLink>
         <RouterLink to="/hair-analysis" class="drawer-item drawer-item--ai" @click="mobileOpen = false">✨ AI 헤어 추천</RouterLink>
         <RouterLink v-if="auth.isStylist" to="/stylist/reservations" class="drawer-item" @click="mobileOpen = false">예약 관리</RouterLink>
         <RouterLink v-if="auth.isLoggedIn" to="/mypage" class="drawer-item" @click="mobileOpen = false">마이페이지</RouterLink>

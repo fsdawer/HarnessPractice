@@ -12,7 +12,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
-        dialect: org.hibernate.dialect.H2Dialect
+        hbm2ddl:
+          halt_on_error: false
 
   mail:
     username: test@naver.com
@@ -37,3 +38,10 @@ jwt:
 toss:
   secret-key: test_secret_key
   client-key: test_client_key
+
+kakao:
+  rest-api-key: test_kakao_rest_api_key
+
+gemini:
+  api:
+    key: test_gemini_api_key

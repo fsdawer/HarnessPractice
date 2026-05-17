@@ -9,6 +9,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -56,5 +58,13 @@ public class UserController {
     public ResponseEntity<Void> deleteMe(@LoginUserId Long userId) {
         userService.deleteMe(userId);
         return ResponseEntity.noContent().build();
+    }
+
+    // PUT /api/users/me/district      위치(구) 인증
+    @PutMapping("/me/district")
+    public ResponseEntity<Void> verifyDistrict(@LoginUserId Long userId,
+                                               @RequestBody Map<String, String> body) {
+        userService.verifyDistrict(userId, body.get("district"));
+        return ResponseEntity.ok().build();
     }
 }

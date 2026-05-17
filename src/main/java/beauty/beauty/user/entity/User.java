@@ -56,6 +56,9 @@ public class User {
     @Column(name = "refresh_token", length = 500)
     private String refreshToken;
 
+    @Column(name = "verified_district", length = 100)
+    private String verifiedDistrict;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

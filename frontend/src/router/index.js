@@ -125,6 +125,22 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/community',
+    name: 'Community',
+    component: () => import('@/views/CommunityView.vue'),
+  },
+  {
+    path: '/community/write',
+    name: 'CommunityWrite',
+    component: () => import('@/views/CommunityWriteView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/community/:id',
+    name: 'CommunityPost',
+    component: () => import('@/views/CommunityPostView.vue'),
+  },
+  {
     path: '/oauth2/callback',
     name: 'OAuth2Callback',
     component: () => import('@/views/OAuth2CallbackView.vue'),
