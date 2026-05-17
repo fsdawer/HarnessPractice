@@ -62,6 +62,7 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testImplementation 'com.h2database:h2'
+	testImplementation 'org.orbisgis:h2gis:2.2.3'         // H2 + Spatial(POINT) 타입 지원
 	testImplementation 'org.awaitility:awaitility:4.2.2'  // 비동기 테스트용
 	testRuntimeOnly    'org.junit.platform:junit-platform-launcher'
 }
