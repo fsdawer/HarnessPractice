@@ -65,6 +65,12 @@ public enum ErrorCode {
     FACE_NOT_DETECTED(HttpStatus.BAD_REQUEST,     "얼굴을 인식할 수 없습니다. 얼굴이 잘 보이는 사진을 올려주세요."),
     HAIR_ANALYSIS_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "AI 분석에 실패했습니다. 잠시 후 다시 시도해주세요."),
 
+    // Community
+    POST_NOT_FOUND(HttpStatus.NOT_FOUND,           "게시글을 찾을 수 없습니다."),
+    NOT_MY_POST(HttpStatus.FORBIDDEN,              "본인의 게시글만 수정/삭제할 수 있습니다."),
+    DISTRICT_NOT_VERIFIED(HttpStatus.BAD_REQUEST,  "위치 인증이 필요합니다."),
+    RESERVATION_NOT_MINE(HttpStatus.FORBIDDEN,     "본인의 예약만 연결할 수 있습니다."),
+
     // Common
     FORBIDDEN(HttpStatus.FORBIDDEN,               "접근 권한이 없습니다."),
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.");

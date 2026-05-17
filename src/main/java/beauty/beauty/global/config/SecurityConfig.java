@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/hair-analysis").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ranking").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/community", "/api/community/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/payments/cancel-pending").permitAll()
                         .requestMatchers("/login/oauth2/**", "/oauth2/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()

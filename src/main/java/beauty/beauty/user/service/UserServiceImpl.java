@@ -121,6 +121,14 @@ public class UserServiceImpl implements UserService {
 
 
 
+    // PUT /api/users/me/district      위치(구) 인증
+    @Override
+    @Transactional
+    public void verifyDistrict(Long userId, String district) {
+        User user = findUserById(userId);
+        user.setVerifiedDistrict(district);
+    }
+
     // ID 조회 공통 메서드
     private User findUserById(Long userId) {
         return userRepository.findById(userId)

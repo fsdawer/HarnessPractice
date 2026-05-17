@@ -15,4 +15,7 @@ export const userApi = {
 
   /** DELETE /api/users/me — 회원 탈퇴 */
   deleteMe: () => api.delete('/api/users/me'),
+
+  /** PUT /api/users/me/district — 위치(구) 인증 */
+  verifyDistrict: (district) => api.put('/api/users/me/district', { district }),
 }
