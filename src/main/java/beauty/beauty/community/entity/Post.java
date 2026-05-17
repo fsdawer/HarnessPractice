@@ -48,9 +48,14 @@ public class Post {
     private int likeCount = 0;
 
     @Builder.Default
-    @Column(name = "created_at", nullable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @PrePersist
+    protected void prePersist() {
+        if (createdAt == null) createdAt = LocalDateTime.now();
+    }
 }
