@@ -9,6 +9,33 @@ description: 새 기능 구현 시 단계별 워크플로우를 안내합니다.
 
 ---
 
+## 0단계: 에이전트 호출 순서 (건너뛰기 금지)
+
+이 스킬이 호출되면 아래 순서를 따른다.
+
+```
+① planner-agent 투입
+   → 설계 계획 + 트레이드오프 사용자에게 제시
+   → 사용자 승인 대기
+
+② 승인 후 worktree 생성
+   git worktree add ../beauty-feature-<기능명> -b feature/<기능명>
+
+③ backend-agent 투입 (worktree에서)
+   → 백엔드 구현 + 프론트엔드 화면 연결까지
+
+④ test-agent 투입
+   → 단위·통합 테스트 작성 및 실행
+
+⑤ review-agent 투입
+   → 보안·성능·컨벤션 리뷰
+
+⑥ gradlew test PASS + review PASS 확인 후
+   git merge --no-ff → worktree 삭제
+```
+
+---
+
 ## 1단계: 요구사항 분석
 
 구현 전 명확히 해야 할 것들:
