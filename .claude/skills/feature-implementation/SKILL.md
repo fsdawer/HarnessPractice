@@ -120,7 +120,32 @@ public class XxxController {
 
 ---
 
-## 6단계: 테스트 작성
+## 6단계: 프론트엔드 연결 (필수)
+
+백엔드 API 완성 후 반드시 아래 두 가지를 구현한다. 건너뛰면 완성이 아니다.
+
+### API 파일 (`frontend/src/api/`)
+```js
+// 예시: frontend/src/api/reservation.js
+export const reservationApi = {
+  create: (data) => api.post('/api/reservations', data),
+  getMyList: () => api.get('/api/reservations/me'),
+}
+```
+
+### 화면 (`frontend/src/views/` 또는 `components/`)
+- 해당 기능을 실제로 사용할 수 있는 Vue 컴포넌트 구현
+- 로딩 상태(`loading`), 에러 상태(`error`) 처리 포함
+- 라우터(`frontend/src/router/index.js`)에 경로 추가 필요 시 추가
+- Navbar에 진입점이 없으면 추가
+
+**체크:**
+- [ ] `api.post/get` 호출이 실제 백엔드 엔드포인트와 일치하는가
+- [ ] 백엔드·프론트 동시에 실행해서 기능이 실제로 동작하는가
+
+---
+
+## 7단계: 테스트 작성
 
 최소한 아래 케이스를 커버합니다:
 
