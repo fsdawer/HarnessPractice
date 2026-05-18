@@ -69,6 +69,10 @@ cd frontend && npm run dev   # 프론트 :5173
 ## API 경로
 `/api/{auth|users|stylists|reservations|payments|reviews|chat|ranking|waiting|favorites}/**`
 
+## 코드 품질 규칙
+- **미사용 객체 즉시 삭제** — 변수·필드·import 선언 후 실제로 사용하는지 확인. 미사용이면 관련 필드·import까지 함께 제거
+- **JWT userId 재조회 금지** — `@LoginUserId Long userId`는 인증 필터에서 이미 검증됨. `userRepository.findById(userId)` 재조회 불필요. 소유권 검증은 연관 엔티티의 userId와 직접 비교로 충분
+
 ## ⚠️ 필수 주의사항
 - **Jackson 3.x**: `tools.jackson.*` 사용 (`com.fasterxml` 금지). `@Jacksonized` 불가 → `@JsonDeserialize(builder=)+@JsonPOJOBuilder`. Redis DTO `@Setter` 필수
 - **@Builder.Default**: 필드 기본값 있으면 반드시 붙임 (`= LocalDateTime.now()` 등)

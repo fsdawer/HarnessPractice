@@ -11,7 +11,6 @@ import beauty.beauty.payment.repository.PaymentRepository;
 import beauty.beauty.reservation.entity.Reservation;
 import beauty.beauty.reservation.repository.ReservationRepository;
 import beauty.beauty.user.entity.User;
-import beauty.beauty.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,7 +37,6 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final ReservationRepository reservationRepository;
-    private final UserRepository userRepository;
     private final UserCouponRepository userCouponRepository;
     private final ChatService chatService;
     private final TransactionTemplate transactionTemplate; // 외부 API와 트랜잭션 분리용
@@ -56,9 +54,6 @@ public class PaymentServiceImpl implements PaymentService {
     public PaymentPrepareResponse prepare(Long userId, PaymentPrepareRequest request) {
 
         // [Flow 1] 결제 권한 및 예약 유효성 검증
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
-
         Reservation reservation = reservationRepository.findById(request.getReservationId())
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
 
