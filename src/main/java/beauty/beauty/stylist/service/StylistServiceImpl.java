@@ -83,6 +83,8 @@ public class StylistServiceImpl implements StylistService {
         return getDetailedProfileResponse(profile);
     }
 
+
+
     @Override
     @Transactional(readOnly = true)
     public StylistProfileResponse getMyProfile(Long userId) {
@@ -90,6 +92,8 @@ public class StylistServiceImpl implements StylistService {
                 .orElseThrow(() -> new CustomException(ErrorCode.STYLIST_PROFILE_NOT_FOUND));
         return getDetailedProfileResponse(profile);
     }
+
+
 
     private StylistProfileResponse getDetailedProfileResponse(StylistProfile profile) {
         List<ServiceResponse> services = stylistServiceRepository

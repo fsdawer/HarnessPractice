@@ -23,6 +23,27 @@ public class KakaoGeocodingService {
     private final HttpClient httpClient = HttpClient.newHttpClient();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    // 좌표 → 구(region_2depth_name) 변환. 실패 시 null 반환
+    public String reverseGeocode(double lat, double lng) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("https://dapi.kakao.com/v2/local/geo/coord2regioncode.json?x=" + lng + "&y=" + lat))
+                    .header("Authorization", "KakaoAK " + restApiKey)
+                    .GET()
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            JsonNode documents = objectMapper.readTree(response.body()).path("documents");
+
+            if (documents.isArray() && !documents.isEmpty()) {
+                return documents.get(0).path("region_2depth_name").asText(null);
+            }
+        } catch (Exception e) {
+            log.warn("[ReverseGeocode] 좌표 변환 실패 — lat={}, lng={}, error={}", lat, lng, e.getMessage());
+        }
+        return null;
+    }
+
     // 주소 → [latitude, longitude] 변환. 실패 시 null 반환
     public double[] geocode(String address) {
         try {

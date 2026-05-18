@@ -10,12 +10,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PaymentPrepareResponse {
 
-    // DB에 저장된 Payment PK (환불 등 후속 요청 시 사용)
     private Long paymentId;
-
-    // 토스 위젯 requestPayment() 에 넘길 orderId
     private String orderId;
-
-    // 토스 위젯 setAmount() 에 넘길 결제 금액
-    private int amount;
+    private int amount;         // 실제 결제 금액 (할인 후)
+    private int originalAmount; // 원래 금액
+    private int discountAmount; // 할인 금액
 }

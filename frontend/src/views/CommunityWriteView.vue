@@ -110,7 +110,7 @@ async function openReservationModal() {
     loadingReservations.value = true
     try {
       const res = await reservationApi.getMyReservations()
-      reservations.value = res.data.map(r => ({
+      reservations.value = (res.data.content || []).map(r => ({
         id: r.id,
         stylistName: r.stylistName,
         serviceName: r.serviceName,
@@ -172,7 +172,7 @@ function statusLabel(status) {
 .back-btn:hover { color: var(--text); }
 .page-title { font-size: 20px; font-weight: 700; color: var(--text); }
 
-.write-form { display: flex; flex-direction: column; gap: 20px; max-width: 640px; }
+.write-form { display: flex; flex-direction: column; gap: 20px; max-width: 560px; margin: 0 auto; width: 100%; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-label { font-size: 13px; font-weight: 600; color: var(--text-sub); }
 .required { color: var(--danger); }

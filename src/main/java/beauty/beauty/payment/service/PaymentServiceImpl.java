@@ -1,6 +1,8 @@
 package beauty.beauty.payment.service;
 
 import beauty.beauty.chat.service.ChatService;
+import beauty.beauty.coupon.entity.UserCoupon;
+import beauty.beauty.coupon.repository.UserCouponRepository;
 import beauty.beauty.global.exception.CustomException;
 import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.payment.dto.*;
@@ -22,6 +24,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -36,6 +39,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final PaymentRepository paymentRepository;
     private final ReservationRepository reservationRepository;
     private final UserRepository userRepository;
+    private final UserCouponRepository userCouponRepository;
     private final ChatService chatService;
     private final TransactionTemplate transactionTemplate; // 외부 API와 트랜잭션 분리용
 
@@ -85,31 +89,53 @@ public class PaymentServiceImpl implements PaymentService {
                     }
                 });
 
-        // [Flow 2] 고유 주문번호(orderId) 생성 및 결제 엔티티 생성
-        // UUID 원문 노출 방지: 16바이트를 Base64url로 인코딩 → 22자 불투명 문자열
+        // [Flow 2] 쿠폰 처리 (선택)
+        int originalAmount = reservation.getTotalPrice();
+        int discountAmount = 0;
+        UserCoupon appliedCoupon = null;
+
+        if (request.getUserCouponId() != null) {
+            appliedCoupon = userCouponRepository.findValidOne(request.getUserCouponId(), userId)
+                    .orElseThrow(() -> new CustomException(ErrorCode.COUPON_INVALID));
+
+            var coupon = appliedCoupon.getCoupon();
+            if (originalAmount < coupon.getMinPrice()) {
+                throw new CustomException(ErrorCode.COUPON_MIN_PRICE_NOT_MET);
+            }
+            discountAmount = originalAmount * coupon.getDiscountRate() / 100;
+            if (coupon.getMaxDiscount() != null) {
+                discountAmount = Math.min(discountAmount, coupon.getMaxDiscount());
+            }
+            appliedCoupon.use();
+        }
+
+        int finalAmount = Math.max(0, originalAmount - discountAmount);
+
+        // [Flow 3] 고유 주문번호(orderId) 생성 및 결제 엔티티 생성
         UUID uuid = UUID.randomUUID();
-        java.nio.ByteBuffer bb = java.nio.ByteBuffer.allocate(16);
+        ByteBuffer bb = ByteBuffer.allocate(16);
         bb.putLong(uuid.getMostSignificantBits());
         bb.putLong(uuid.getLeastSignificantBits());
         String orderId = Base64.getUrlEncoder().withoutPadding().encodeToString(bb.array());
 
         Payment payment = Payment.builder()
-                .reservation(reservation) 
-                .orderId(orderId)         
-                .amount(reservation.getTotalPrice()) 
+                .reservation(reservation)
+                .orderId(orderId)
+                .amount(finalAmount)
+                .discountAmount(discountAmount)
+                .userCoupon(appliedCoupon)
                 .status(Payment.PayStatus.PENDING)
-                .method(Payment.Method.TOSS) // 임시 기본값, confirm에서 실제 수단(카드, 카카오페이 등)으로 덮어씀
+                .method(Payment.Method.TOSS)
                 .build();
 
-        // [Flow 3] 결제 내역 DB 저장 (PENDING 상태)
-        // 이 시점에서는 돈이 빠져나가지 않았으며, 프론트엔드가 토스페이먼츠 결제창을 띄우기 위한 준비 단계입니다.
         Payment savedPayment = paymentRepository.save(payment);
 
-        // PaymentPrepareResponse 반환
         return PaymentPrepareResponse.builder()
                 .paymentId(savedPayment.getId())
                 .orderId(savedPayment.getOrderId())
                 .amount(savedPayment.getAmount())
+                .originalAmount(originalAmount)
+                .discountAmount(discountAmount)
                 .build();
     }
 
@@ -235,10 +261,13 @@ public class PaymentServiceImpl implements PaymentService {
             throw new CustomException(ErrorCode.TOSS_API_FAILED);
         }
         
-        // 3. [DB 트랜잭션 O] 상태 업데이트
+        // 3. [DB 트랜잭션 O] 상태 업데이트 + 쿠폰 복원
         transactionTemplate.execute(status -> {
             Payment paymentToUpdate = paymentRepository.findById(validatedPayment.getId()).orElseThrow();
             paymentToUpdate.setStatus(Payment.PayStatus.REFUNDED);
+            if (paymentToUpdate.getUserCoupon() != null) {
+                paymentToUpdate.getUserCoupon().restore();
+            }
             return null;
         });
     }
@@ -252,6 +281,9 @@ public class PaymentServiceImpl implements PaymentService {
             if (payment.getStatus() != Payment.PayStatus.PENDING) return;
             // 결제 상태가 pending이 아니면 메서드 종료 아무것도 없이 리턴
 
+            if (payment.getUserCoupon() != null) {
+                payment.getUserCoupon().restore();
+            }
             Reservation reservation = payment.getReservation();
             if (reservation != null && reservation.getStatus() == Reservation.Status.PENDING) {
                 reservation.setStatus(Reservation.Status.CANCELLED);

@@ -1,5 +1,8 @@
 package beauty.beauty.user.controller;
 
+import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.global.exception.ErrorCode;
+import beauty.beauty.global.kakao.KakaoGeocodingService;
 import beauty.beauty.user.dto.ChangePasswordRequest;
 import beauty.beauty.user.dto.UpdateUserRequest;
 import beauty.beauty.user.dto.UserResponse;
@@ -17,6 +20,7 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final KakaoGeocodingService kakaoGeocodingService;
 
     // GET  /api/users/me               내 정보 조회
     @GetMapping("/me")
@@ -58,6 +62,18 @@ public class UserController {
     public ResponseEntity<Void> deleteMe(@LoginUserId Long userId) {
         userService.deleteMe(userId);
         return ResponseEntity.noContent().build();
+    }
+
+    // GET /api/users/location         좌표 → 구 이름 변환
+    @GetMapping("/location")
+    public ResponseEntity<Map<String, String>> getDistrictByCoords(
+            @RequestParam double lat,
+            @RequestParam double lng) {
+        String district = kakaoGeocodingService.reverseGeocode(lat, lng);
+        if (district == null || district.isBlank()) {
+            throw new CustomException(ErrorCode.LOCATION_DETECTION_FAILED);
+        }
+        return ResponseEntity.ok(Map.of("district", district));
     }
 
     // PUT /api/users/me/district      위치(구) 인증

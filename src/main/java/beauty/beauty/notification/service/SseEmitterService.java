@@ -16,8 +16,11 @@ public class SseEmitterService {
     private final Map<Long, SseEmitter> emitters = new ConcurrentHashMap<>();
 
     public SseEmitter connect(Long userId) {
-        SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
-        emitters.put(userId, emitter);
+        SseEmitter emitter = new SseEmitter(5 * 60 * 1000L);
+        SseEmitter old = emitters.put(userId, emitter);
+        if (old != null) {
+            try { old.complete(); } catch (Exception ignored) {}
+        }
         emitter.onCompletion(() -> emitters.remove(userId, emitter));
         emitter.onTimeout(()    -> emitters.remove(userId, emitter));
         emitter.onError(e      -> emitters.remove(userId, emitter));

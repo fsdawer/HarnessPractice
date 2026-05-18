@@ -86,11 +86,13 @@ public class NotificationService {
         }
     }
 
-    // 재연결 시 미전달 알림 조회 후 목록 삭제
+    // 재연결 시 미전달 알림 원자적 조회·삭제 (RENAME → range → delete)
     public List<NotificationMessage> flushPending(Long userId) {
-        String key = PENDING_KEY_PREFIX + userId;
-        List<String> raw = stringRedisTemplate.opsForList().range(key, 0, -1);
-        stringRedisTemplate.delete(key);
+        String key    = PENDING_KEY_PREFIX + userId;
+        String tmpKey = key + ":flush";
+        stringRedisTemplate.rename(key, tmpKey);
+        List<String> raw = stringRedisTemplate.opsForList().range(tmpKey, 0, -1);
+        stringRedisTemplate.delete(tmpKey);
 
         if (raw == null || raw.isEmpty()) return List.of();
 

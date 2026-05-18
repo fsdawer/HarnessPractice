@@ -18,4 +18,7 @@ export const userApi = {
 
   /** PUT /api/users/me/district — 위치(구) 인증 */
   verifyDistrict: (district) => api.put('/api/users/me/district', { district }),
+
+  /** GET /api/users/location — 좌표 → 구 이름 변환 */
+  getDistrictByCoords: (lat, lng) => api.get('/api/users/location', { params: { lat, lng } }),
 }

@@ -131,23 +131,22 @@ function goToRoom(room) {
 
 .chat-fab {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--primary);
   color: #fff;
   border: none;
   cursor: pointer;
-  box-shadow: 0 4px 18px rgba(3, 199, 90, 0.38);
-  transition: var(--transition);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+  transition: background 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 .chat-fab:hover {
-  background: var(--primary-dark);
-  transform: scale(1.07);
+  background: var(--primary-hover);
 }
 
 .chat-popup {

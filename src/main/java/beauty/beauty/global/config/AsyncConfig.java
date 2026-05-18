@@ -3,9 +3,11 @@ package beauty.beauty.global.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadPoolExecutor;
 
 /**
  * [After 2] @Async 스레드풀 설정
@@ -29,7 +31,7 @@ import java.util.concurrent.Executor;
  */
 @Configuration
 @EnableAsync
-@org.springframework.scheduling.annotation.EnableScheduling
+@EnableScheduling
 public class AsyncConfig {
 
     @Bean(name = "reservationTaskExecutor")
@@ -39,7 +41,7 @@ public class AsyncConfig {
         executor.setMaxPoolSize(5);
         executor.setQueueCapacity(50);
         executor.setThreadNamePrefix("reservation-async-");
-        executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;
     }

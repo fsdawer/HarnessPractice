@@ -1,12 +1,15 @@
 package beauty.beauty.payment.entity;
 
+import beauty.beauty.coupon.entity.UserCoupon;
 import beauty.beauty.reservation.entity.Reservation;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "payments", indexes = {
+    @Index(name = "idx_payment_status_created", columnList = "status, created_at")
+})
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor @Builder
 public class Payment {
@@ -23,6 +26,14 @@ public class Payment {
 
     @Column(name = "payment_key", length = 200)
     private String paymentKey;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_coupon_id")
+    private UserCoupon userCoupon;
+
+    @Builder.Default
+    @Column(name = "discount_amount", nullable = false)
+    private int discountAmount = 0;
 
     @Column(nullable = false)
     private int amount;

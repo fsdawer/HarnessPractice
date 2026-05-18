@@ -91,6 +91,7 @@ public class UserServiceImpl implements UserService {
         user.setDeletedAt(Instant.now());
     }
 
+
     @Override
     @Transactional
     public UserResponse upgradeToStylist(Long userId, UpgradeToStylistRequest request) {

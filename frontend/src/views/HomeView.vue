@@ -258,7 +258,7 @@ onMounted(() => { search(); loadRanking() })
 /* Ranking Section */
 .ai-banner {
   display: flex; align-items: center; justify-content: space-between;
-  background: linear-gradient(135deg, #7c5cef 0%, #a97cf8 100%);
+  background: var(--primary);
   border-radius: 20px; padding: 28px 32px; margin: 40px 0 0;
   color: #fff; text-decoration: none; transition: opacity 0.2s;
 }

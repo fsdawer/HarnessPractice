@@ -70,6 +70,7 @@ public enum ErrorCode {
     NOT_MY_POST(HttpStatus.FORBIDDEN,              "본인의 게시글만 수정/삭제할 수 있습니다."),
     DISTRICT_NOT_VERIFIED(HttpStatus.BAD_REQUEST,  "위치 인증이 필요합니다."),
     RESERVATION_NOT_MINE(HttpStatus.FORBIDDEN,     "본인의 예약만 연결할 수 있습니다."),
+    LOCATION_DETECTION_FAILED(HttpStatus.BAD_REQUEST, "위치 감지에 실패했습니다. 다시 시도해 주세요."),
 
     // Common
     FORBIDDEN(HttpStatus.FORBIDDEN,               "접근 권한이 없습니다."),
