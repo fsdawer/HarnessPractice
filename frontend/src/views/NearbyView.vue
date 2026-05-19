@@ -101,6 +101,7 @@ import { stylistApi } from '@/api/stylist'
 
 const mapContainer = ref(null)
 const mapInstance  = ref(null)
+const mapMarkers   = ref([])
 const myLocation   = ref(null)
 const stylists     = ref([])
 const locating     = ref(false)
@@ -142,21 +143,24 @@ function waitForKakao(timeout = 5000) {
   })
 }
 
-function initMap(lat, lng) {
-  if (!mapContainer.value) return
-  const center = new window.kakao.maps.LatLng(lat, lng)
-  const map = new window.kakao.maps.Map(mapContainer.value, { center, level: 5 })
-  mapInstance.value = map
+function clearMapMarkers() {
+  mapMarkers.value.forEach(m => m.setMap(null))
+  mapMarkers.value = []
+}
 
-  // 내 위치 마커
-  new window.kakao.maps.Marker({
+function drawMarkers(map, lat, lng) {
+  clearMapMarkers()
+
+  // 내 위치 (별 마커)
+  const myMarker = new window.kakao.maps.Marker({
     map,
-    position: center,
+    position: new window.kakao.maps.LatLng(lat, lng),
     image: new window.kakao.maps.MarkerImage(
       'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png',
       new window.kakao.maps.Size(24, 35)
     ),
   })
+  mapMarkers.value.push(myMarker)
 
   // 스타일리스트 마커
   stylists.value.forEach(s => {
@@ -166,15 +170,27 @@ function initMap(lat, lng) {
     const info = new window.kakao.maps.InfoWindow({
       content: `<div style="padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap"
         onclick="location.href='/stylist/${s.id}'">${s.name}<br>
-        <span style="font-size:11px;color:#6b7280">★${Number(s.rating??0).toFixed(1)} · ${s.salonName||'프리랜서'}</span></div>`,
+        <span style="font-size:11px;color:#6b7280">★${Number(s.rating ?? 0).toFixed(1)} · ${s.salonName || '프리랜서'}</span></div>`,
     })
     window.kakao.maps.event.addListener(marker, 'click', () => info.open(map, marker))
+    mapMarkers.value.push(marker)
   })
 }
 
-function clearMapMarkers() {
-  // 지도 재초기화: 인스턴스 버리고 다음 사이클에 새로 그림
-  mapInstance.value = null
+function initMap(lat, lng) {
+  if (!mapContainer.value) return
+  const center = new window.kakao.maps.LatLng(lat, lng)
+
+  if (mapInstance.value) {
+    // 지도 재사용: 마커만 새로 그림
+    mapInstance.value.setCenter(center)
+    drawMarkers(mapInstance.value, lat, lng)
+    return
+  }
+
+  const map = new window.kakao.maps.Map(mapContainer.value, { center, level: 5 })
+  mapInstance.value = map
+  drawMarkers(map, lat, lng)
 }
 
 async function fetchAndDraw(lat, lng, r) {
@@ -189,7 +205,6 @@ async function fetchAndDraw(lat, lng, r) {
   }
 
   await nextTick()
-  clearMapMarkers()
   await waitForKakao()
   window.kakao.maps.load(() => initMap(lat, lng))
 }

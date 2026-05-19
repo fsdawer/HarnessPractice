@@ -87,8 +87,13 @@ public class PaymentCleanupScheduler {
 
         // DB 정리 — 건별 독립 트랜잭션 사용
         // 한 건의 DB 정리 실패가 다른 건의 롤백으로 이어지지 않도록 분리
+        // payment는 이 람다 밖에서 로드된 detached 엔티티 → 현재 세션에서 재조회해야 lazy 프록시 사용 가능
+        Long paymentId = payment.getId();
         transactionTemplate.execute(status -> {
-            Reservation reservation = payment.getReservation();
+            Payment p = paymentRepository.findById(paymentId).orElse(null);
+            if (p == null) return null;
+
+            Reservation reservation = p.getReservation();
 
             // 연관 예약이 아직 PENDING이면 CANCELLED로 변경 (슬롯 점유 해제)
             if (reservation != null && reservation.getStatus() == Reservation.Status.PENDING) {
@@ -97,7 +102,7 @@ public class PaymentCleanupScheduler {
             }
 
             // 만료된 결제 레코드 삭제
-            paymentRepository.delete(payment);
+            paymentRepository.delete(p);
             return null;
         });
         log.info("[Cleanup] 만료 결제 정리 완료 — paymentId={}", payment.getId());

@@ -65,9 +65,9 @@ public interface StylistProfileRepository extends JpaRepository<StylistProfile, 
             JOIN salons s ON sp.salon_id = s.id
             WHERE s.location IS NOT NULL
             AND ST_Distance_Sphere(s.location,
-                ST_GeomFromText(CONCAT('POINT(', :lng, ' ', :lat, ')'), 4326)) <= :radius
+                ST_GeomFromText(CONCAT('POINT(', :lat, ' ', :lng, ')'), 4326)) <= :radius
             ORDER BY ST_Distance_Sphere(s.location,
-                ST_GeomFromText(CONCAT('POINT(', :lng, ' ', :lat, ')'), 4326))
+                ST_GeomFromText(CONCAT('POINT(', :lat, ' ', :lng, ')'), 4326))
             LIMIT 20
             """, nativeQuery = true)
     List<Long> findNearbyIds(@Param("lat") double lat,

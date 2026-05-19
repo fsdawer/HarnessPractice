@@ -3,6 +3,9 @@ package beauty.beauty.auth.service;
 import beauty.beauty.auth.dto.LoginRequest;
 import beauty.beauty.auth.dto.RegisterRequest;
 import beauty.beauty.auth.dto.TokenResponse;
+import beauty.beauty.coupon.entity.UserCoupon;
+import beauty.beauty.coupon.repository.CouponRepository;
+import beauty.beauty.coupon.repository.UserCouponRepository;
 import beauty.beauty.global.exception.CustomException;
 import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.global.jwt.JwtUtil;
@@ -26,6 +29,8 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final StylistProfileRepository stylistProfileRepository;
     private final SalonRepository salonRepository;
+    private final CouponRepository couponRepository;
+    private final UserCouponRepository userCouponRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final TokenBlacklistService tokenBlacklistService;
@@ -53,7 +58,14 @@ public class AuthServiceImpl implements AuthService {
                 .build();
         userRepository.save(user);
 
-        // [Flow 3] 미용사(STYLIST)로 가입하는 경우 추가 프로필(Salon, StylistProfile) 연동 저장
+        // [Flow 3] USER로 가입 시 활성화된 쿠폰이 있으면 자동 발급
+        if (User.Role.USER.equals(user.getRole())) {
+            couponRepository.findFirstActive().ifPresent(coupon ->
+                userCouponRepository.save(UserCoupon.builder().user(user).coupon(coupon).build())
+            );
+        }
+
+        // [Flow 4] 미용사(STYLIST)로 가입하는 경우 추가 프로필(Salon, StylistProfile) 연동 저장
         if (User.Role.STYLIST.equals(user.getRole())) {
             Salon salon = salonRepository.save(Salon.builder()
                     .name(request.getSalonName())

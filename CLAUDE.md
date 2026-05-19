@@ -82,23 +82,26 @@ cd frontend && npm run dev   # 프론트 :5173
 - **환경변수**: `.env` 절대 커밋 금지. `spring-dotenv`로 자동 주입. `KAKAO_REST_API_KEY=4b99eef97fd6cc9b8f07529eb48a3732`
 
 ## 에이전트 팀
-나(메인 Claude) = 팀장. 팀원 4명 (`.claude/agents/`, 모두 sonnet):
+나(메인 Claude) = 팀장. 팀원 5명 (`.claude/agents/`, 모두 sonnet):
 - **planner**: 설계·계획 수립 (코드 수정 금지)
-- **backend**: Spring Boot + Vue.js 구현, 반드시 워크트리에서 작업
+- **backend**: Spring Boot 백엔드 구현 (엔티티/레포/서비스/DTO/컨트롤러), 반드시 워크트리에서 작업
+- **frontend**: Vue.js 프론트엔드 구현 (api 파일/뷰/컴포넌트), 반드시 워크트리에서 작업
 - **test**: 테스트 작성·실행 (`src/main/` 수정 금지)
 - **review**: 코드 리뷰 (수정 금지)
 
 ### ❗ 기능 구현 시 반드시 따르는 순서 (건너뛰기 금지)
 
 ```
-1. Skill(feature-implementation) 호출          ← 스킬 먼저
-2. planner-agent 투입 → 설계·트레이드오프 제시  ← 사용자 승인 대기
+1. Skill(feature-implementation) 호출              ← 스킬 먼저
+2. planner-agent 투입 → 설계·트레이드오프 제시      ← 사용자 승인 대기
 3. 사용자 승인 후
 4. git worktree add ../beauty-feature-<기능명> -b feature/<기능명>
-5. backend-agent in worktree → 백엔드 + 프론트 동시 구현
-6. test-agent → 테스트 작성·실행
-7. review-agent → 코드 리뷰
-8. gradlew test PASS + review PASS → git merge --no-ff → worktree 삭제
+5. backend-agent in worktree → 백엔드 구현 + gradlew build PASS
+6. frontend-agent in worktree → 프론트 구현 + npm run build PASS
+   (planner가 API 스펙을 상세히 정의했다면 5·6 병렬 실행 가능)
+7. test-agent → 테스트 작성·실행
+8. review-agent → 코드 리뷰
+9. gradlew test PASS + review PASS → git merge --no-ff → worktree 삭제
 ```
 
 **각 단계를 건너뛰면 안 되는 이유:**

@@ -13,8 +13,11 @@ import java.time.LocalDateTime;
     @Index(name = "idx_post_id_desc", columnList = "id DESC"),
     @Index(name = "idx_post_district_id", columnList = "district, id DESC")
 })
+
 @SQLRestriction("deleted_at IS NULL")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor @AllArgsConstructor @Builder
 public class Post {
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)

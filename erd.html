@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>CutIng ERD</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    body { background: #1e1e2e; margin: 0; padding: 20px; font-family: sans-serif; }
+    h1 { color: #cdd6f4; text-align: center; margin-bottom: 24px; }
+    .mermaid { background: #fff; border-radius: 12px; padding: 24px; max-width: 100%; overflow-x: auto; }
+  </style>
+</head>
+<body>
+  <h1>CutIng — ERD</h1>
+  <div class="mermaid">
+erDiagram
+    users {
+        BIGINT id PK
+        VARCHAR username UK
+        VARCHAR email UK
+        VARCHAR name
+        ENUM role "USER|STYLIST"
+        ENUM provider "LOCAL|KAKAO|NAVER"
+        VARCHAR verified_district
+        BOOLEAN is_verified
+        DATETIME created_at
+        INSTANT deleted_at
+    }
+    salons {
+        BIGINT id PK
+        VARCHAR name
+        VARCHAR district
+        VARCHAR address
+        POINT location
+    }
+    stylist_profiles {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT salon_id FK
+        DECIMAL rating
+        INT review_count
+        INT favorite_count
+        DATETIME deleted_at
+    }
+    stylist_services {
+        BIGINT id PK
+        BIGINT stylist_id FK
+        VARCHAR name
+        VARCHAR category
+        INT price
+        INT duration
+        BOOLEAN is_active
+    }
+    operating_hours {
+        BIGINT id PK
+        BIGINT stylist_id FK
+        INT day_of_week
+        TIME open_time
+        TIME close_time
+        BOOLEAN is_closed
+    }
+    reservations {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT stylist_id FK
+        BIGINT service_id FK
+        DATETIME reserved_at
+        ENUM status "PENDING|CONFIRMED|DONE|CANCELLED"
+        INT total_price
+        DATETIME created_at
+    }
+    reservation_images {
+        BIGINT id PK
+        BIGINT reservation_id FK
+        VARCHAR image_url
+    }
+    waitings {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT stylist_profile_id FK
+        DATE waiting_date
+        TIME waiting_time
+    }
+    payments {
+        BIGINT id PK
+        BIGINT reservation_id FK "UNIQUE"
+        BIGINT user_coupon_id FK
+        VARCHAR order_id UK
+        INT amount
+        INT discount_amount
+        ENUM method "TOSS|NAVER_PAY|KAKAO_PAY"
+        ENUM status "PENDING|PAID|REFUNDED"
+        DATETIME paid_at
+    }
+    reviews {
+        BIGINT id PK
+        BIGINT reservation_id FK "UNIQUE"
+        BIGINT user_id FK
+        BIGINT stylist_id FK
+        DECIMAL rating
+        TEXT content
+        DATETIME created_at
+        DATETIME deleted_at
+    }
+    chat_rooms {
+        BIGINT id PK
+        BIGINT reservation_id FK "UNIQUE"
+        BIGINT user_id FK
+        BIGINT stylist_user_id FK
+        DATETIME last_message_at
+        VARCHAR last_message_content
+    }
+    messages {
+        BIGINT id PK
+        BIGINT room_id FK
+        BIGINT sender_id FK
+        TEXT content
+        BOOLEAN is_read
+        DATETIME created_at
+    }
+    coupons {
+        BIGINT id PK
+        BIGINT stylist_id FK
+        VARCHAR code UK
+        INT discount_rate
+        INT min_price
+        DATETIME expired_at
+    }
+    user_coupons {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT coupon_id FK
+        BOOLEAN is_used
+        DATETIME used_at
+        DATETIME issued_at
+    }
+    favorite_stylists {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT stylist_profile_id FK
+        DATETIME created_at
+    }
+    stylist_daily_stats {
+        BIGINT id PK
+        BIGINT stylist_profile_id FK
+        DATE stat_date
+        INT reservation_count
+        BIGINT total_revenue
+        INT cancel_count
+    }
+    posts {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT reservation_id FK
+        VARCHAR title
+        TEXT content
+        VARCHAR district
+        INT view_count
+        INT like_count
+        DATETIME deleted_at
+    }
+    post_likes {
+        BIGINT id PK
+        BIGINT user_id FK
+        BIGINT post_id FK
+    }
+
+    users            ||--o| stylist_profiles   : "1:1"
+    users            ||--o{ reservations       : "예약"
+    users            ||--o{ waitings           : "빈자리 대기"
+    users            ||--o{ reviews            : "리뷰"
+    users            ||--o{ user_coupons       : "쿠폰 보유"
+    users            ||--o{ favorite_stylists  : "찜"
+    users            ||--o{ posts              : "커뮤니티"
+    users            ||--o{ post_likes         : "좋아요"
+    users            ||--o{ chat_rooms         : "고객"
+    users            ||--o{ chat_rooms         : "스타일리스트"
+    users            ||--o{ messages           : "발신자"
+
+    salons           ||--o{ stylist_profiles   : "소속"
+
+    stylist_profiles ||--o{ stylist_services   : "서비스 메뉴"
+    stylist_profiles ||--o{ operating_hours    : "영업시간"
+    stylist_profiles ||--o{ reservations       : "담당"
+    stylist_profiles ||--o{ reviews            : "리뷰 대상"
+    stylist_profiles ||--o{ coupons            : "쿠폰 발급"
+    stylist_profiles ||--o{ favorite_stylists  : "찜 대상"
+    stylist_profiles ||--o{ waitings           : "빈자리"
+    stylist_profiles ||--o{ stylist_daily_stats: "일별 통계"
+
+    stylist_services ||--o{ reservations       : "예약 서비스"
+
+    reservations     ||--o{ reservation_images : "이미지"
+    reservations     ||--o| payments           : "1:1 결제"
+    reservations     ||--o| reviews            : "1:1 리뷰"
+    reservations     ||--o| chat_rooms         : "1:1 채팅방"
+    reservations     ||--o{ posts              : "후기 연결"
+
+    coupons          ||--o{ user_coupons       : "발급"
+    user_coupons     ||--o{ payments           : "적용"
+
+    chat_rooms       ||--o{ messages           : "메시지"
+
+    posts            ||--o{ post_likes         : "좋아요"
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'default', er: { diagramPadding: 20, layoutDirection: 'TB' } });
+  </script>
+</body>
+</html>

@@ -21,8 +21,15 @@ description: 새 기능 구현 시 단계별 워크플로우를 안내합니다.
 ② 승인 후 worktree 생성
    git worktree add ../beauty-feature-<기능명> -b feature/<기능명>
 
-③ backend-agent 투입 (worktree에서)
-   → 백엔드 구현 + 프론트엔드 화면 연결까지
+③-A backend-agent 투입 (worktree에서)
+   → 엔티티/레포지토리/서비스/DTO/컨트롤러 구현
+   → ./gradlew build -x test PASS 확인 후 완료 보고
+
+③-B frontend-agent 투입 (worktree에서, ③-A 완료 후)
+   → API 파일 / 뷰 / 컴포넌트 구현
+   → npm run build PASS 확인 후 완료 보고
+
+   ※ planner가 API 스펙을 상세히 정의했다면 ③-A 와 ③-B 병렬 실행 가능
 
 ④ test-agent 투입
    → 단위·통합 테스트 작성 및 실행
