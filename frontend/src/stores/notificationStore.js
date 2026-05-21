@@ -5,13 +5,15 @@ export const useNotificationStore = defineStore('notification', () => {
   const notifications = ref([])
   const connected = ref(false)
   let eventSource = null
+  const seen = new Set()  // 세션 내 수신한 dedupKey 집합 (O(1) 조회)
 
   const unreadCount = computed(() => notifications.value.filter(n => !n.read).length)
 
   function addNotification(msg) {
-    // 같은 type + reservationId(또는 reservedAt) 조합은 중복 수신 방지
-    const dedupKey = `${msg.type}_${msg.reservationId ?? msg.reservedAt ?? ''}`
-    if (dedupKey && notifications.value.some(n => n.dedupKey === dedupKey)) return
+    // 서버가 보낸 dedupKey 우선, 없으면 클라이언트에서 구성
+    const dedupKey = msg.dedupKey ?? `${msg.type}_${msg.reservationId ?? msg.reservedAt ?? ''}`
+    if (dedupKey && seen.has(dedupKey)) return
+    if (dedupKey) seen.add(dedupKey)
 
     notifications.value.unshift({
       id: `${Date.now()}-${Math.random()}`,
@@ -53,6 +55,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
   function clearAll() {
     notifications.value = []
+    seen.clear()
   }
 
   let retryTimer = null

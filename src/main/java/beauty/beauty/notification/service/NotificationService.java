@@ -38,6 +38,7 @@ public class NotificationService {
                 .clientName(reservation.getUser().getName())
                 .reservedAt(reservation.getReservedAt().toString())
                 .message("새 예약이 확정되었습니다.")
+                .dedupKey("RESERVATION_CREATED:" + reservation.getId())
                 .build();
 
         sendAndPersist(stylistUserId, msg);
@@ -53,6 +54,7 @@ public class NotificationService {
                 .type("WAITING_AVAILABLE")
                 .reservedAt(date + "T" + time)
                 .message(dateLabel + " 빈자리가 생겼습니다!")
+                .dedupKey("WAITING_AVAILABLE:" + date + "T" + time)
                 .build();
         sendAndPersist(userId, msg);
     }
@@ -68,13 +70,15 @@ public class NotificationService {
                 .clientName(reservation.getUser().getName())
                 .reservedAt(reservation.getReservedAt().toString())
                 .message(label + " 예약이 있습니다.")
+                .dedupKey("RESERVATION_REMINDER_" + timing + ":" + reservation.getId())
                 .build();
         sendAndPersist(reservation.getUser().getId(), msg);
     }
 
-    // SSE 즉시 전송 + Redis List 보관 (연결 해제 시 재연결 후 수신)
+    // SSE 즉시 전송 성공 시 Redis 저장 생략, 실패(연결 없음 포함) 시에만 보관
     private void sendAndPersist(Long userId, NotificationMessage msg) {
-        sseEmitterService.send(userId, msg);
+        boolean delivered = sseEmitterService.send(userId, msg);
+        if (delivered) return;
 
         try {
             String key  = PENDING_KEY_PREFIX + userId;
