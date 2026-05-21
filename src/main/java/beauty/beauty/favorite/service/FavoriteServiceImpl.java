@@ -1,5 +1,6 @@
 package beauty.beauty.favorite.service;
 
+import beauty.beauty.favorite.dto.FavoriteToggleResponse;
 import beauty.beauty.favorite.entity.FavoriteStylist;
 import beauty.beauty.favorite.repository.FavoriteStylistRepository;
 import beauty.beauty.global.exception.CustomException;
@@ -34,7 +35,7 @@ public class FavoriteServiceImpl implements FavoriteService {
 
     @Override
     @Transactional
-    public boolean toggleFavorite(Long userId, Long stylistProfileId) {
+    public FavoriteToggleResponse toggleFavorite(Long userId, Long stylistProfileId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
         StylistProfile stylistProfile = stylistProfileRepository.findById(stylistProfileId)
@@ -45,15 +46,22 @@ public class FavoriteServiceImpl implements FavoriteService {
         if (existing.isPresent()) {
             favoriteStylistRepository.delete(existing.get());
             stylistProfileRepository.decrementFavoriteCount(stylistProfileId);
-            return false;
+            int newCount = Math.max(0, stylistProfile.getFavoriteCount() - 1);
+            return FavoriteToggleResponse.builder().favorited(false).favoriteCount(newCount).build();
         } else {
-            FavoriteStylist favoriteStylist = FavoriteStylist.builder()
+            favoriteStylistRepository.save(FavoriteStylist.builder()
                     .user(user)
                     .stylistProfile(stylistProfile)
-                    .build();
-            favoriteStylistRepository.save(favoriteStylist);
+                    .build());
             stylistProfileRepository.incrementFavoriteCount(stylistProfileId);
-            return true;
+            int newCount = stylistProfile.getFavoriteCount() + 1;
+            return FavoriteToggleResponse.builder().favorited(true).favoriteCount(newCount).build();
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean checkStatus(Long userId, Long stylistProfileId) {
+        return favoriteStylistRepository.existsByUserIdAndStylistProfileId(userId, stylistProfileId);
     }
 }

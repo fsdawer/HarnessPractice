@@ -19,6 +19,7 @@ public class StylistProfileResponse {
     private int experience;
     private BigDecimal rating;
     private int reviewCount;
+    private int favoriteCount;
 
     // 소속 미용실 정보
     private String salonName;
@@ -42,6 +43,7 @@ public class StylistProfileResponse {
                 .experience(profile.getExperience())
                 .rating(profile.getRating())
                 .reviewCount(profile.getReviewCount())
+                .favoriteCount(profile.getFavoriteCount())
                 .salonName(salon != null ? salon.getName() : null)
                 .location(salon != null ? salon.getAddress() : null)
                 .salonPhone(salon != null ? salon.getPhone() : null)
@@ -64,6 +66,7 @@ public class StylistProfileResponse {
                 .experience(profile.getExperience())
                 .rating(profile.getRating())
                 .reviewCount(profile.getReviewCount())
+                .favoriteCount(profile.getFavoriteCount())
                 .salonName(salon != null ? salon.getName() : null)
                 .location(salon != null ? salon.getAddress() : null)
                 .salonPhone(salon != null ? salon.getPhone() : null)

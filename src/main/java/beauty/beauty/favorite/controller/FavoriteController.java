@@ -1,5 +1,6 @@
 package beauty.beauty.favorite.controller;
 
+import beauty.beauty.favorite.dto.FavoriteToggleResponse;
 import beauty.beauty.favorite.service.FavoriteService;
 import beauty.beauty.global.annotation.LoginUserId;
 import beauty.beauty.stylist.dto.StylistProfileResponse;
@@ -8,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/favorites")
@@ -22,16 +24,16 @@ public class FavoriteController {
     }
 
     @PostMapping("/stylists/{stylistProfileId}")
-    public ResponseEntity<String> toggleFavorite(
+    public ResponseEntity<FavoriteToggleResponse> toggleFavorite(
             @LoginUserId Long userId,
             @PathVariable Long stylistProfileId) {
+        return ResponseEntity.ok(favoriteService.toggleFavorite(userId, stylistProfileId));
+    }
 
-        boolean isFavorited = favoriteService.toggleFavorite(userId, stylistProfileId);
-
-        if (isFavorited) {
-            return ResponseEntity.ok("찜하기가 완료되었습니다.");
-        } else {
-            return ResponseEntity.ok("찜하기가 취소되었습니다.");
-        }
+    @GetMapping("/stylists/{stylistProfileId}/status")
+    public ResponseEntity<Map<String, Boolean>> checkStatus(
+            @LoginUserId Long userId,
+            @PathVariable Long stylistProfileId) {
+        return ResponseEntity.ok(Map.of("favorited", favoriteService.checkStatus(userId, stylistProfileId)));
     }
 }
