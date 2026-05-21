@@ -17,8 +17,8 @@ model: sonnet
 ✔ [단계] 완료
 ```
 
-로그 기록:
-```bash
+❗ 아래를 Bash 툴로 직접 실행. 텍스트 출력만 하면 안 됨:
+```
 mkdir -p .claude/logs
 echo "[$(date '+%H:%M:%S')] ▶ 단계명" >> .claude/logs/planner.log
 ```

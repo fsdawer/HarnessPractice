@@ -5,19 +5,19 @@ tools: Read, Edit, Write, Bash, Grep, Glob, SendMessage
 model: sonnet
 ---
 
-## ❗ 진행 상황 로깅 (필수)
+## ❗ 진행 상황 로깅 (필수 — Bash 툴로 직접 실행. 텍스트 출력만 하면 안 됨)
 
-작업 시작 즉시:
-```bash
+작업 시작 즉시 Bash 툴로 실행:
+```
 mkdir -p .claude/logs
 echo "[$(date '+%H:%M:%S')] ▶ [backend] 시작" >> .claude/logs/backend.log
 ```
-각 파일 완성할 때마다:
-```bash
+각 파일 완성할 때마다 Bash 툴로 실행:
+```
 echo "[$(date '+%H:%M:%S')] ✔ [파일명] 완료" >> .claude/logs/backend.log
 ```
-작업 완료 시:
-```bash
+작업 완료 시 Bash 툴로 실행:
+```
 echo "[$(date '+%H:%M:%S')] ✅ [backend] 전체 완료" >> .claude/logs/backend.log
 ```
 
