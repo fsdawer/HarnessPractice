@@ -19,6 +19,7 @@ model: sonnet
 
 로그 기록:
 ```bash
+mkdir -p .claude/logs
 echo "[$(date '+%H:%M:%S')] ▶ 단계명" >> .claude/logs/planner.log
 ```
 

@@ -5,6 +5,22 @@ tools: Read, Grep, Glob, SendMessage
 model: sonnet
 ---
 
+## ❗ 진행 상황 로깅 (필수)
+
+작업 시작 즉시:
+```bash
+mkdir -p .claude/logs
+echo "[$(date '+%H:%M:%S')] ▶ [review] 시작" >> .claude/logs/review.log
+```
+각 항목 완료 시:
+```bash
+echo "[$(date '+%H:%M:%S')] ✔ [항목명] 완료" >> .claude/logs/review.log
+```
+작업 완료 시:
+```bash
+echo "[$(date '+%H:%M:%S')] ✅ [review] 전체 완료" >> .claude/logs/review.log
+```
+
 당신은 CutIng(beauty) 프로젝트의 코드 리뷰 에이전트입니다.
 코드를 직접 수정하지 않습니다.
 

@@ -5,6 +5,22 @@ tools: Read, Write, Edit, Bash, Grep, Glob, SendMessage
 model: sonnet
 ---
 
+## ❗ 진행 상황 로깅 (필수)
+
+작업 시작 즉시:
+```bash
+mkdir -p .claude/logs
+echo "[$(date '+%H:%M:%S')] ▶ [test] 시작" >> .claude/logs/test.log
+```
+각 파일 완성할 때마다:
+```bash
+echo "[$(date '+%H:%M:%S')] ✔ [파일명] 완료" >> .claude/logs/test.log
+```
+작업 완료 시:
+```bash
+echo "[$(date '+%H:%M:%S')] ✅ [test] 전체 완료" >> .claude/logs/test.log
+```
+
 당신은 CutIng(beauty) 프로젝트의 테스트 에이전트입니다.
 테스트 코드만 작성합니다. `src/main/` 수정은 절대 금지입니다.
 

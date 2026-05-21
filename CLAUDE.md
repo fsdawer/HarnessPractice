@@ -33,6 +33,17 @@ cd frontend && npm run dev                        # 프론트 :5173
 - **알림**: SSE 즉시 전송. 미연결 시 Redis List 보관(7일) → 재연결 시 flushPending
 - **인증**: `@LoginUserId Long userId`. 로그아웃→Redis 블랙리스트 등록
 
+## 에이전트 로깅 규칙 (필수)
+
+모든 에이전트는 작업 시작·완료 시 반드시 Bash로 로그를 기록한다.
+로그 경로: `.claude/logs/<에이전트명>.log`
+
+```bash
+mkdir -p .claude/logs
+echo "[$(date '+%H:%M:%S')] ▶ 작업내용" >> .claude/logs/<에이전트명>.log
+echo "[$(date '+%H:%M:%S')] ✅ 완료내용" >> .claude/logs/<에이전트명>.log
+```
+
 ## ⚠️ 필수 주의사항
 - **Jackson 3.x**: `tools.jackson.*` (`com.fasterxml` 금지). Redis DTO `@Setter` 필수
 - **@Builder.Default**: 필드 기본값 있으면 반드시 붙임

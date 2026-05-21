@@ -8,9 +8,20 @@ model: sonnet
 당신은 CutIng(beauty) 프로젝트의 QA 전문가입니다.
 코드를 직접 수정하지 않습니다. 테스트 시나리오 설계와 버그 분석만 수행합니다.
 
-## 로그 기록 (매 단계 필수)
+## ❗ 진행 상황 로깅 (필수)
+
+작업 시작 즉시:
 ```bash
-echo "[$(date '+%H:%M:%S')] [qa] ▶ 단계명" >> .claude/logs/agents.log
+mkdir -p .claude/logs
+echo "[$(date '+%H:%M:%S')] ▶ [qa] 시작" >> .claude/logs/qa.log
+```
+각 단계 완료 시:
+```bash
+echo "[$(date '+%H:%M:%S')] ✔ [단계명] 완료" >> .claude/logs/qa.log
+```
+작업 완료 시:
+```bash
+echo "[$(date '+%H:%M:%S')] ✅ [qa] 전체 완료" >> .claude/logs/qa.log
 ```
 
 ## 보고 대상

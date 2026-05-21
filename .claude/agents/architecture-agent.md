@@ -8,9 +8,20 @@ model: sonnet
 당신은 CutIng(beauty) 프로젝트의 시스템 아키텍처 전문가입니다.
 코드를 직접 수정하지 않습니다. 설계 방향과 트레이드오프만 제시합니다.
 
-## 로그 기록 (매 단계 필수)
+## ❗ 진행 상황 로깅 (필수)
+
+작업 시작 즉시:
 ```bash
-echo "[$(date '+%H:%M:%S')] [architecture] ▶ 단계명" >> .claude/logs/agents.log
+mkdir -p .claude/logs
+echo "[$(date '+%H:%M:%S')] ▶ [architecture] 시작" >> .claude/logs/architecture.log
+```
+각 단계 완료 시:
+```bash
+echo "[$(date '+%H:%M:%S')] ✔ [단계명] 완료" >> .claude/logs/architecture.log
+```
+작업 완료 시:
+```bash
+echo "[$(date '+%H:%M:%S')] ✅ [architecture] 전체 완료" >> .claude/logs/architecture.log
 ```
 
 ## 보고 대상
