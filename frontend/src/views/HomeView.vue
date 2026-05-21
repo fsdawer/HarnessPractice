@@ -66,7 +66,7 @@
 
       <!-- 스타일리스트 목록 -->
       <div v-else class="stylists-grid">
-        <StylistCard v-for="s in sortedStylists" :key="s.id" :stylist="s" />
+        <StylistCard v-for="s in sortedStylists" :key="s.id" :stylist="s" :favorited="favoritedIds.has(s.id)" />
       </div>
 
       <!-- AI 헤어 추천 배너 -->
@@ -136,6 +136,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import StylistCard from '@/components/StylistCard.vue'
 import { stylistApi } from '@/api/stylist'
 import { rankingApi } from '@/api/ranking'
+import { favoriteApi } from '@/api/favorite'
 
 const searchQuery  = ref('')
 const districtQuery = ref('')
@@ -143,6 +144,8 @@ const activeFilter = ref('all')
 const sortBy       = ref('rating')
 const loading      = ref(false)
 const stylists     = ref([])
+
+const favoritedIds = ref(new Set())
 
 const rankDistrict = ref('강남구')
 const rankLoading  = ref(false)
@@ -190,7 +193,14 @@ async function loadRanking() {
   finally { rankLoading.value = false }
 }
 
-onMounted(() => { search(); loadRanking() })
+async function loadFavorites() {
+  try {
+    const res = await favoriteApi.getMyFavorites()
+    favoritedIds.value = new Set((res.data || []).map(s => s.id))
+  } catch { /* 비로그인 시 무시 */ }
+}
+
+onMounted(() => { search(); loadRanking(); loadFavorites() })
 </script>
 
 <style scoped>

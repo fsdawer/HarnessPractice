@@ -168,6 +168,7 @@ import { stylistApi } from '@/api/stylist'
 import { reviewApi } from '@/api/review'
 import { reservationApi } from '@/api/reservation'
 import api from '@/api/index'
+import { favoriteApi } from '@/api/favorite'
 
 const route  = useRoute()
 const router = useRouter()
@@ -235,10 +236,10 @@ function goBookWithSlot(slot) {
 
 async function toggleFavorite() {
   try {
-    const res = await api.post(`/api/favorites/stylists/${stylist.value.id}`)
-    isFavorited.value = res.data?.includes('완료')
+    const res = await favoriteApi.toggle(stylist.value.id)
+    isFavorited.value = res.data.favorited
   } catch (e) {
-    if (!isFavorited.value) alert(e.response?.data?.message || '로그인이 필요합니다.')
+    alert(e.response?.data?.message || '로그인이 필요합니다.')
   }
 }
 
@@ -253,6 +254,10 @@ onMounted(async () => {
     reviews.value = reviewRes.data || []
     workingHours.value = stylist.value.workingHours || []
     await loadAvailableSlots()
+    try {
+      const statusRes = await favoriteApi.checkStatus(id)
+      isFavorited.value = statusRes.data.favorited
+    } catch { /* 비로그인 시 무시 */ }
   } catch { stylist.value = null }
   finally { loading.value = false }
 })
