@@ -1,5 +1,6 @@
 package beauty.beauty.stylist.service;
 
+import beauty.beauty.stylist.dto.SliceResponse;
 import beauty.beauty.stylist.dto.*;
 import beauty.beauty.stylist.entity.OperatingHours;
 import beauty.beauty.stylist.entity.Salon;
@@ -7,6 +8,7 @@ import beauty.beauty.stylist.entity.StylistProfile;
 import beauty.beauty.stylist.entity.StylistServiceItem;
 import beauty.beauty.stylist.repository.OperatingHoursRepository;
 import beauty.beauty.stylist.repository.SalonRepository;
+import beauty.beauty.stylist.repository.StylistDailyStatRepository;
 import beauty.beauty.stylist.repository.StylistProfileRepository;
 import beauty.beauty.stylist.repository.StylistSearchSpec;
 import beauty.beauty.stylist.repository.StylistServiceRepository;
@@ -52,14 +54,15 @@ public class StylistServiceImpl implements StylistService {
     private final ReservationRepository reservationRepository;
     private final PaymentRepository paymentRepository;
     private final ReviewRepository reviewRepository;
+    private final StylistDailyStatRepository stylistDailyStatRepository;
 
     private static final GeometryFactory GEO_FACTORY = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Override
     @Transactional(readOnly = true)
-    public List<StylistProfileResponse> getStylists(
+    public SliceResponse<StylistProfileResponse> getStylists(
             String keyword, String district, String category,
-            Integer minPrice, Integer maxPrice, String sort) {
+            Integer minPrice, Integer maxPrice, String sort, int page, int size) {
 
         Specification<StylistProfile> spec = StylistSearchSpec.build(keyword, district, category, minPrice, maxPrice);
 
@@ -69,10 +72,12 @@ public class StylistServiceImpl implements StylistService {
             default       -> Sort.by("rating").descending();
         };
 
-        return stylistProfileRepository.findAll(spec, sortOrder)
+        var pageResult = stylistProfileRepository.findAll(spec, PageRequest.of(page, size, sortOrder));
+        List<StylistProfileResponse> content = pageResult.getContent()
                 .stream()
                 .map(StylistProfileResponse::from)
-                .collect(Collectors.toList());
+                .toList();
+        return new SliceResponse<>(content, page, size, pageResult.getTotalElements());
     }
 
     @Override
@@ -326,6 +331,18 @@ public class StylistServiceImpl implements StylistService {
                 .map(RecentReservationDto::from)
                 .collect(Collectors.toList());
 
+        // 최근 30일 일별 매출 통계
+        LocalDate thirtyDaysAgo = today.minusDays(29);
+        List<StylistDashboardResponse.DailyStatDto> dailyStats = stylistDailyStatRepository
+                .findByStylistProfileIdAndStatDateBetweenOrderByStatDateAsc(stylistId, thirtyDaysAgo, today)
+                .stream()
+                .map(s -> StylistDashboardResponse.DailyStatDto.builder()
+                        .date(s.getStatDate())
+                        .revenue(s.getTotalRevenue())
+                        .reservationCount(s.getReservationCount())
+                        .build())
+                .toList();
+
         return StylistDashboardResponse.builder()
                 .reservation(StylistDashboardResponse.ReservationStats.builder()
                         .todayCount(todayCount)
@@ -341,6 +358,7 @@ public class StylistServiceImpl implements StylistService {
                         .avgRating(avgRating)
                         .build())
                 .recentReservations(recent)
+                .dailyStats(dailyStats)
                 .build();
     }
 }

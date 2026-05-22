@@ -41,11 +41,16 @@
           <span class="menu-title">리뷰 관리</span>
           <span class="menu-arrow">›</span>
         </RouterLink>
-        <button class="menu-item" @click="comingSoon">
-          <span class="menu-icon">📰</span>
-          <span class="menu-title">관심 매거진</span>
-          <span class="menu-badge-soon">준비 중</span>
-        </button>
+        <RouterLink to="/notifications" class="menu-item">
+          <span class="menu-icon">🔔</span>
+          <span class="menu-title">알림</span>
+          <span class="menu-arrow">›</span>
+        </RouterLink>
+        <RouterLink to="/chat" class="menu-item">
+          <span class="menu-icon">💬</span>
+          <span class="menu-title">채팅</span>
+          <span class="menu-arrow">›</span>
+        </RouterLink>
       </div>
 
       <div class="menu-section card">

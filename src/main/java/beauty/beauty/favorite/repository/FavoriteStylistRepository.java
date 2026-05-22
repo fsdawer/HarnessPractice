@@ -19,4 +19,7 @@ public interface FavoriteStylistRepository extends JpaRepository<FavoriteStylist
            "WHERE fs.user.id = :userId " +
            "ORDER BY fs.createdAt DESC")
     List<FavoriteStylist> findByUserIdWithDetails(@Param("userId") Long userId);
+
+    @Query("SELECT fs FROM FavoriteStylist fs JOIN FETCH fs.user WHERE fs.stylistProfile.id = :stylistProfileId")
+    List<FavoriteStylist> findByStylistProfileIdWithUser(@Param("stylistProfileId") Long stylistProfileId);
 }

@@ -59,6 +59,27 @@
           </div>
         </div>
 
+        <!-- 매출 차트 -->
+        <template v-if="data.dailyStats && data.dailyStats.length > 0">
+          <h2 class="dash-group-title">최근 30일 매출</h2>
+          <div class="chart-wrap">
+            <div class="chart-bars">
+              <div
+                v-for="s in data.dailyStats"
+                :key="s.date"
+                class="chart-bar-col"
+                :title="`${s.date}: ${s.revenue.toLocaleString()}원`"
+              >
+                <div
+                  class="chart-bar"
+                  :style="{ height: barHeight(s.revenue) }"
+                ></div>
+                <span class="chart-label">{{ formatChartDate(s.date) }}</span>
+              </div>
+            </div>
+          </div>
+        </template>
+
         <!-- 최근 예약 -->
         <h2 class="dash-group-title">최근 예약 5건</h2>
         <div v-if="data.recentReservations.length === 0" class="state-center">
@@ -137,6 +158,19 @@ function formatDate(s) {
   const hh = String(d.getHours()).padStart(2, '0')
   const mi = String(d.getMinutes()).padStart(2, '0')
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}`
+}
+
+function barHeight(revenue) {
+  if (!data.value?.dailyStats?.length) return '0%'
+  const maxRev = Math.max(...data.value.dailyStats.map(s => s.revenue), 1)
+  const pct = Math.round((revenue / maxRev) * 100)
+  return `${Math.max(pct, 2)}%`
+}
+
+function formatChartDate(d) {
+  if (!d) return ''
+  const parts = String(d).split('-')
+  return `${parts[1]}/${parts[2]}`
 }
 
 async function load() {
@@ -251,5 +285,45 @@ onMounted(load)
 .msg-error {
   color: #991b1b;
   margin-top: 12px;
+}
+
+/* Chart */
+.chart-wrap {
+  background: #fff;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 8px;
+  overflow-x: auto;
+}
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 100px;
+  min-width: max-content;
+}
+.chart-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  width: 18px;
+}
+.chart-bar {
+  width: 100%;
+  background: var(--primary, #4f46e5);
+  border-radius: 3px 3px 0 0;
+  min-height: 2px;
+  transition: height 0.3s;
+}
+.chart-label {
+  font-size: 9px;
+  color: var(--text-muted, #9ca3af);
+  white-space: nowrap;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  height: 30px;
 }
 </style>

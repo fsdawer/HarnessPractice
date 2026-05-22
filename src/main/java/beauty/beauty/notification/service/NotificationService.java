@@ -1,6 +1,8 @@
 package beauty.beauty.notification.service;
 
 import beauty.beauty.notification.dto.NotificationMessage;
+import beauty.beauty.notification.entity.NotificationHistory;
+import beauty.beauty.notification.repository.NotificationHistoryRepository;
 import beauty.beauty.reservation.entity.Reservation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,9 +21,10 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationService {
 
-    private final SseEmitterService    sseEmitterService;
-    private final StringRedisTemplate  stringRedisTemplate;
-    private final ObjectMapper         redisObjectMapper;
+    private final SseEmitterService             sseEmitterService;
+    private final StringRedisTemplate           stringRedisTemplate;
+    private final ObjectMapper                  redisObjectMapper;
+    private final NotificationHistoryRepository notificationHistoryRepository;
 
     private static final String PENDING_KEY_PREFIX = "notifications:";
     private static final Duration PENDING_TTL = Duration.ofDays(7);
@@ -76,7 +79,10 @@ public class NotificationService {
     }
 
     // SSE 즉시 전송 성공 시 Redis 저장 생략, 실패(연결 없음 포함) 시에만 보관
+    // DB 히스토리는 항상 저장
     private void sendAndPersist(Long userId, NotificationMessage msg) {
+        saveHistory(userId, msg);
+
         boolean delivered = sseEmitterService.send(userId, msg);
         if (delivered) return;
 
@@ -87,6 +93,18 @@ public class NotificationService {
             stringRedisTemplate.expire(key, PENDING_TTL);
         } catch (Exception e) {
             log.warn("알림 Redis 저장 실패 - userId: {}", userId, e);
+        }
+    }
+
+    private void saveHistory(Long userId, NotificationMessage msg) {
+        try {
+            notificationHistoryRepository.save(NotificationHistory.builder()
+                    .userId(userId)
+                    .type(msg.getType())
+                    .message(msg.getMessage())
+                    .build());
+        } catch (Exception e) {
+            log.warn("알림 히스토리 DB 저장 실패 - userId: {}", userId, e);
         }
     }
 

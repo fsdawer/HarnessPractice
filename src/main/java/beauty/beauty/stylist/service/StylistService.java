@@ -2,6 +2,7 @@ package beauty.beauty.stylist.service;
 
 import beauty.beauty.stylist.dto.ServiceRequest;
 import beauty.beauty.stylist.dto.ServiceResponse;
+import beauty.beauty.stylist.dto.SliceResponse;
 import beauty.beauty.stylist.dto.StylistProfileResponse;
 import beauty.beauty.stylist.dto.UpdateStylistProfileRequest;
 import beauty.beauty.stylist.dto.WorkingHoursRequest;
@@ -10,9 +11,9 @@ import beauty.beauty.stylist.dto.WorkingHoursResponse;
 import java.util.List;
 
 public interface StylistService {
-    List<StylistProfileResponse> getStylists(
+    SliceResponse<StylistProfileResponse> getStylists(
             String keyword, String district, String category,
-            Integer minPrice, Integer maxPrice, String sort);
+            Integer minPrice, Integer maxPrice, String sort, int page, int size);
 
     StylistProfileResponse getStylist(Long stylistId);
 

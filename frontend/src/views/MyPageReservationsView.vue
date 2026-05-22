@@ -151,6 +151,11 @@
                 @click.stop="openReviewModal(r)"
               >리뷰 작성</button>
               <span v-if="r.status === 'DONE' && reviewedIds.has(r.id)" class="review-done-label">리뷰 작성 완료</span>
+              <RouterLink
+                v-if="r.status === 'DONE' || r.status === 'CANCELLED'"
+                :to="`/booking/${r.stylistId}`"
+                class="btn btn-ghost btn-sm"
+              >재예약</RouterLink>
             </div>
           </div>
         </div>

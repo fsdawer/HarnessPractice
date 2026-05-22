@@ -16,6 +16,7 @@ import beauty.beauty.stylist.entity.OperatingHours;
 import beauty.beauty.stylist.entity.StylistProfile;
 import beauty.beauty.stylist.entity.StylistServiceItem;
 import beauty.beauty.stylist.repository.OperatingHoursRepository;
+import beauty.beauty.stylist.repository.StylistHolidayRepository;
 import beauty.beauty.stylist.repository.StylistProfileRepository;
 import beauty.beauty.stylist.repository.StylistServiceRepository;
 import beauty.beauty.user.entity.User;
@@ -65,6 +66,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final ReservationRepository reservationRepository;
     private final ReservationImageRepository reservationImageRepository;
     private final OperatingHoursRepository operatingHoursRepository;
+    private final StylistHolidayRepository stylistHolidayRepository;
     private final ChatService chatService;
     private final ChatRoomRepository chatRoomRepository;
     // [AFTER] 이벤트 기반 비동기 처리
@@ -118,6 +120,12 @@ public class ReservationServiceImpl implements ReservationService {
                         .orElseThrow(() -> new CustomException(ErrorCode.OPERATING_HOURS_NOT_FOUND));
 
                 if (hours.isClosed()) {
+                    throw new CustomException(ErrorCode.HOLIDAY);
+                }
+
+                // 특정 날짜 휴무 체크
+                if (stylistHolidayRepository.existsByStylistProfileIdAndHolidayDate(
+                        stylist.getId(), reservedAt.toLocalDate())) {
                     throw new CustomException(ErrorCode.HOLIDAY);
                 }
 

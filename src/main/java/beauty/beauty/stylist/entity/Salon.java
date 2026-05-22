@@ -35,7 +35,7 @@ public class Salon {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(columnDefinition = "POINT SRID 4326")
+    @Column
     private Point location; // 미용실 위치 (경도, 위도)
 
     @Builder.Default
