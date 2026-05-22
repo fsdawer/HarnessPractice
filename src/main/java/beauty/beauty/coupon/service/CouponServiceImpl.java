@@ -9,6 +9,7 @@ import beauty.beauty.coupon.repository.UserCouponRepository;
 import beauty.beauty.global.exception.CustomException;
 import beauty.beauty.global.exception.ErrorCode;
 import beauty.beauty.stylist.entity.StylistProfile;
+import beauty.beauty.favorite.repository.FavoriteStylistRepository;
 import beauty.beauty.stylist.repository.StylistProfileRepository;
 import beauty.beauty.user.entity.User;
 import beauty.beauty.user.repository.UserRepository;
@@ -28,6 +29,7 @@ public class CouponServiceImpl implements CouponService {
     private final CouponRepository couponRepository;
     private final UserRepository userRepository;
     private final StylistProfileRepository stylistProfileRepository;
+    private final FavoriteStylistRepository favoriteStylistRepository;
 
 
     // 미용사가 쿠폰 생성
@@ -116,6 +118,39 @@ public class CouponServiceImpl implements CouponService {
                 .orElseThrow(() -> new CustomException(ErrorCode.COUPON_INVALID));
 
         userCoupon.use();
+    }
+
+
+    // 즐겨찾기 유저 전체에게 쿠폰 일괄 발급
+    @Override
+    @Transactional
+    public int grantToFavorites(Long stylistUserId, Long couponId) {
+        Coupon coupon = couponRepository.findById(couponId)
+                .orElseThrow(() -> new CustomException(ErrorCode.COUPON_NOT_FOUND));
+
+        if (coupon.getStylist() == null
+                || !coupon.getStylist().getUser().getId().equals(stylistUserId)) {
+            throw new CustomException(ErrorCode.COUPON_NOT_OWNED);
+        }
+
+        StylistProfile stylistProfile = coupon.getStylist();
+        List<Long> favoriteUserIds = favoriteStylistRepository
+                .findByStylistProfileIdWithUser(stylistProfile.getId())
+                .stream()
+                .map(fs -> fs.getUser().getId())
+                .toList();
+
+        int count = 0;
+        for (Long targetUserId : favoriteUserIds) {
+            if (userCouponRepository.existsByUserIdAndCouponId(targetUserId, couponId)) continue;
+            User user = userRepository.findById(targetUserId).orElse(null);
+            if (user == null) continue;
+            try {
+                userCouponRepository.save(UserCoupon.builder().user(user).coupon(coupon).build());
+                count++;
+            } catch (DataIntegrityViolationException ignored) {}
+        }
+        return count;
     }
 
 

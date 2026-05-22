@@ -8,13 +8,14 @@ import beauty.beauty.review.repository.ReviewRepository;
 import beauty.beauty.stylist.dto.StylistDashboardResponse;
 import beauty.beauty.stylist.entity.StylistProfile;
 import beauty.beauty.stylist.entity.StylistServiceItem;
+import beauty.beauty.global.exception.CustomException;
 import beauty.beauty.stylist.repository.OperatingHoursRepository;
 import beauty.beauty.stylist.repository.SalonRepository;
+import beauty.beauty.stylist.repository.StylistDailyStatRepository;
 import beauty.beauty.stylist.repository.StylistProfileRepository;
 import beauty.beauty.stylist.repository.StylistServiceRepository;
 import beauty.beauty.global.kakao.KakaoGeocodingService;
 import beauty.beauty.user.entity.User;
-import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -53,6 +55,7 @@ class StylistDashboardServiceTest {
     @Mock private ReservationRepository reservationRepository;
     @Mock private PaymentRepository paymentRepository;
     @Mock private ReviewRepository reviewRepository;
+    @Mock private StylistDailyStatRepository stylistDailyStatRepository;
 
     @InjectMocks private StylistServiceImpl stylistService;
 
@@ -80,12 +83,12 @@ class StylistDashboardServiceTest {
     }
 
     @Test
-    @DisplayName("미용사 프로필이 없으면 EntityNotFoundException")
+    @DisplayName("미용사 프로필이 없으면 CustomException")
     void getDashboard_noProfile() {
         when(stylistProfileRepository.findByUserId(USER_ID)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> stylistService.getDashboard(USER_ID))
-                .isInstanceOf(EntityNotFoundException.class);
+                .isInstanceOf(CustomException.class);
     }
 
     @Test
@@ -116,6 +119,10 @@ class StylistDashboardServiceTest {
         Reservation r2 = res(102L, LocalDateTime.now().plusDays(2), Reservation.Status.CONFIRMED, 30000);
         when(reservationRepository.findRecentByStylistId(eq(STYLIST_ID), any(Pageable.class)))
                 .thenReturn(List.of(r1, r2));
+
+        // 일별 통계
+        when(stylistDailyStatRepository.findByStylistProfileIdAndStatDateBetweenOrderByStatDateAsc(anyLong(), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
 
         StylistDashboardResponse res = stylistService.getDashboard(USER_ID);
 
@@ -151,6 +158,8 @@ class StylistDashboardServiceTest {
                 .thenReturn(Collections.singletonList(new Object[]{null, 0L}));
         when(reservationRepository.findRecentByStylistId(anyLong(), any(Pageable.class)))
                 .thenReturn(List.of());
+        when(stylistDailyStatRepository.findByStylistProfileIdAndStatDateBetweenOrderByStatDateAsc(anyLong(), any(LocalDate.class), any(LocalDate.class)))
+                .thenReturn(List.of());
 
         StylistDashboardResponse res = stylistService.getDashboard(USER_ID);
 
@@ -170,6 +179,8 @@ class StylistDashboardServiceTest {
         when(reviewRepository.calcRatingStats(STYLIST_ID))
                 .thenReturn(Collections.singletonList(new Object[]{4.0, 2L}));
         when(reservationRepository.findRecentByStylistId(anyLong(), any(Pageable.class)))
+                .thenReturn(List.of());
+        when(stylistDailyStatRepository.findByStylistProfileIdAndStatDateBetweenOrderByStatDateAsc(anyLong(), any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(List.of());
 
         StylistDashboardResponse res = stylistService.getDashboard(USER_ID);

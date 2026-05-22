@@ -3,6 +3,7 @@ package beauty.beauty.stylist.controller;
 import beauty.beauty.global.annotation.LoginUserId;
 import beauty.beauty.stylist.dto.ServiceRequest;
 import beauty.beauty.stylist.dto.ServiceResponse;
+import beauty.beauty.stylist.dto.SliceResponse;
 import beauty.beauty.stylist.dto.StylistDashboardResponse;
 import beauty.beauty.stylist.dto.StylistProfileResponse;
 import beauty.beauty.stylist.dto.UpdateStylistProfileRequest;
@@ -22,17 +23,19 @@ public class StylistController {
 
     private final StylistService stylistService;
 
-    // GET  /api/stylists               전체 목록 (검색, 필터, 정렬)
+    // GET  /api/stylists               전체 목록 (검색, 필터, 정렬, 페이지네이션)
     @GetMapping
-    public ResponseEntity<List<StylistProfileResponse>> getStylists(
+    public ResponseEntity<SliceResponse<StylistProfileResponse>> getStylists(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String district,
             @RequestParam(required = false) String category,
             @RequestParam(required = false) Integer minPrice,
             @RequestParam(required = false) Integer maxPrice,
-            @RequestParam(required = false) String sort) {
+            @RequestParam(required = false) String sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
 
-        return ResponseEntity.ok(stylistService.getStylists(keyword, district, category, minPrice, maxPrice, sort));
+        return ResponseEntity.ok(stylistService.getStylists(keyword, district, category, minPrice, maxPrice, sort, page, size));
     }
 
     // GET  /api/stylists/nearby          위치 기반 주변 미용사 조회

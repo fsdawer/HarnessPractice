@@ -61,4 +61,11 @@ public class CouponController {
         couponService.useCoupon(userId, userCouponId);
         return ResponseEntity.ok().build();
     }
+
+    // 즐겨찾기 유저 전체에게 쿠폰 일괄 발급
+    @PostMapping("/{couponId}/grant-to-favorites")
+    public ResponseEntity<Integer> grantToFavorites(@LoginUserId Long userId,
+                                                    @PathVariable Long couponId) {
+        return ResponseEntity.ok(couponService.grantToFavorites(userId, couponId));
+    }
 }

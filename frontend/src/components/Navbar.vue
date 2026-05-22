@@ -16,6 +16,9 @@
           <RouterLink to="/stylist/reservations" class="nav-link">예약 관리</RouterLink>
         </li>
         <li v-if="auth.isLoggedIn">
+          <RouterLink to="/chat" class="nav-link">채팅</RouterLink>
+        </li>
+        <li v-if="auth.isLoggedIn">
           <RouterLink to="/mypage" class="nav-link">마이페이지</RouterLink>
         </li>
       </ul>
@@ -41,7 +44,7 @@
               <div v-if="notifOpen" class="notif-dropdown">
                 <div class="notif-header">
                   <span class="notif-title">알림</span>
-                  <button v-if="notif.notifications.length > 0" class="notif-clear" @click="notif.clearAll()">모두 지우기</button>
+                  <RouterLink to="/notifications" class="notif-more" @click="notifOpen = false">전체 보기</RouterLink>
                 </div>
                 <div class="notif-body">
                   <div v-if="notif.notifications.length === 0" class="notif-empty">
@@ -196,6 +199,8 @@ onUnmounted(() => document.removeEventListener('click', onClickOutside))
 .notif-title { font-size: 14px; font-weight: 700; color: var(--text); }
 .notif-clear { font-size: 12px; color: var(--text-muted); background: none; border: none; cursor: pointer; padding: 0; }
 .notif-clear:hover { color: var(--danger); }
+.notif-more { font-size: 12px; color: var(--primary); text-decoration: none; }
+.notif-more:hover { text-decoration: underline; }
 
 .notif-body { overflow-y: auto; flex: 1; }
 .notif-empty { padding: 32px 16px; text-align: center; font-size: 13px; color: var(--text-muted); }

@@ -7,4 +7,7 @@ export const communityApi = {
   createPost: (data) => api.post('/api/community', data),
   deletePost: (id) => api.delete(`/api/community/${id}`),
   toggleLike: (id) => api.post(`/api/community/${id}/like`),
+  getComments: (postId) => api.get(`/api/posts/${postId}/comments`),
+  addComment: (postId, content) => api.post(`/api/posts/${postId}/comments`, { content }),
+  deleteComment: (postId, commentId) => api.delete(`/api/posts/${postId}/comments/${commentId}`),
 }

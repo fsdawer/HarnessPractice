@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Getter
@@ -14,6 +15,7 @@ public class StylistDashboardResponse {
     private SalesStats sales;
     private ReviewStats review;
     private List<RecentReservationDto> recentReservations;
+    private List<DailyStatDto> dailyStats;
 
     @Getter
     @Builder
@@ -35,5 +37,13 @@ public class StylistDashboardResponse {
     public static class ReviewStats {
         private long totalCount;     // 총 리뷰 수
         private BigDecimal avgRating; // 평균 평점
+    }
+
+    @Getter
+    @Builder
+    public static class DailyStatDto {
+        private LocalDate date;
+        private long revenue;
+        private int reservationCount;
     }
 }

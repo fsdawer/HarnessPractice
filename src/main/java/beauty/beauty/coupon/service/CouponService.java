@@ -25,4 +25,7 @@ public interface CouponService {
 
     // 6. 할인 금액 계산 (결제 전 미리 계산해서 프론트에 보여줄 때)
     int calculateDiscount(Long userId, Long userCouponId, int originalPrice);
+
+    // 7. 즐겨찾기 유저 전체에게 일괄 발급
+    int grantToFavorites(Long stylistUserId, Long couponId);
 }

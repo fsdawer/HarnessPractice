@@ -77,14 +77,14 @@ class ReservationStreamListenerTest {
         MapRecord<String, String, String> message = mockMessage(reservationIdStr);
         Reservation reservation = mockReservation();
 
-        when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
+        when(reservationRepository.findByIdWithNotificationData(1L)).thenReturn(Optional.of(reservation));
         when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
 
         // when
         listener.onMessage(message);
 
         // then
-        verify(reservationRepository, times(1)).findById(1L);
+        verify(reservationRepository, times(1)).findByIdWithNotificationData(1L);
         verify(notificationService, times(1)).notifyReservationCreated(reservation);
         verify(streamOperations, times(1)).acknowledge(anyString(), eq(message));
     }
@@ -98,7 +98,7 @@ class ReservationStreamListenerTest {
         MapRecord<String, String, String> message = mockMessage("1");
         Reservation reservation = mockReservation();
 
-        when(reservationRepository.findById(1L)).thenReturn(Optional.of(reservation));
+        when(reservationRepository.findByIdWithNotificationData(1L)).thenReturn(Optional.of(reservation));
         when(stringRedisTemplate.opsForStream()).thenReturn(streamOperations);
 
         doThrow(new RuntimeException("Redis 장애")).when(rankingService).recalculateScore(any());
@@ -118,7 +118,7 @@ class ReservationStreamListenerTest {
     void onMessage_reservationNotFound_noAck() {
         // given
         MapRecord<String, String, String> message = mockMessage("999");
-        when(reservationRepository.findById(999L)).thenReturn(Optional.empty());
+        when(reservationRepository.findByIdWithNotificationData(999L)).thenReturn(Optional.empty());
 
         // when
         listener.onMessage(message);

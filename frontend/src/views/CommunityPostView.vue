@@ -60,6 +60,48 @@
             @click="handleDelete"
           >삭제</button>
         </div>
+
+        <!-- 댓글 섹션 -->
+        <div class="comment-section">
+          <h3 class="comment-title">댓글 {{ comments.length }}</h3>
+
+          <div v-if="auth.isLoggedIn" class="comment-form">
+            <textarea
+              v-model="newComment"
+              class="comment-input"
+              placeholder="댓글을 입력하세요..."
+              rows="2"
+              @keydown.ctrl.enter="submitComment"
+            ></textarea>
+            <div class="comment-form-footer">
+              <span class="comment-hint">Ctrl+Enter로 등록</span>
+              <button class="btn btn-primary btn-sm" :disabled="!newComment.trim() || submitting" @click="submitComment">등록</button>
+            </div>
+          </div>
+
+          <div v-if="commentsLoading" class="cmt-loading">불러오는 중...</div>
+          <div v-else-if="comments.length === 0" class="cmt-empty">아직 댓글이 없습니다.</div>
+          <div v-else class="comment-list">
+            <div v-for="c in comments" :key="c.id" class="comment-item">
+              <div class="cmt-avatar">
+                <img v-if="c.userProfileImg" :src="c.userProfileImg" alt="" class="cmt-img" />
+                <div v-else class="cmt-initial">{{ (c.userName || '?')[0] }}</div>
+              </div>
+              <div class="cmt-body">
+                <div class="cmt-meta">
+                  <span class="cmt-name">{{ c.userName }}</span>
+                  <span class="cmt-date">{{ formatDate(c.createdAt) }}</span>
+                  <button
+                    v-if="auth.user?.id === c.userId"
+                    class="cmt-del-btn"
+                    @click="deleteComment(c.id)"
+                  >삭제</button>
+                </div>
+                <p class="cmt-text">{{ c.content }}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </template>
 
       <div v-else class="error-state">게시글을 찾을 수 없습니다.</div>
@@ -79,6 +121,10 @@ const auth = useAuthStore()
 
 const post = ref(null)
 const loading = ref(true)
+const comments = ref([])
+const commentsLoading = ref(false)
+const newComment = ref('')
+const submitting = ref(false)
 
 onMounted(async () => {
   try {
@@ -89,7 +135,37 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+  loadComments()
 })
+
+async function loadComments() {
+  commentsLoading.value = true
+  try {
+    const res = await communityApi.getComments(route.params.id)
+    comments.value = res.data || []
+  } catch { comments.value = [] }
+  finally { commentsLoading.value = false }
+}
+
+async function submitComment() {
+  if (!newComment.value.trim() || submitting.value) return
+  submitting.value = true
+  try {
+    await communityApi.addComment(route.params.id, newComment.value.trim())
+    newComment.value = ''
+    await loadComments()
+  } catch (e) {
+    alert(e.response?.data?.message || '댓글 등록 실패')
+  } finally { submitting.value = false }
+}
+
+async function deleteComment(commentId) {
+  if (!confirm('댓글을 삭제하시겠습니까?')) return
+  try {
+    await communityApi.deleteComment(route.params.id, commentId)
+    comments.value = comments.value.filter(c => c.id !== commentId)
+  } catch { alert('삭제 실패') }
+}
 
 async function handleLike() {
   if (!auth.isLoggedIn) return
@@ -184,4 +260,44 @@ function formatDate(dateStr) {
   font-size: 13px; cursor: pointer; transition: var(--transition);
 }
 .delete-btn:hover { background: var(--danger); color: #fff; }
+
+/* Comments */
+.comment-section { margin-top: 32px; }
+.comment-title { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+
+.comment-form { margin-bottom: 20px; }
+.comment-input {
+  width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; font-size: 14px; resize: vertical; font-family: inherit;
+  background: var(--bg); color: var(--text); transition: var(--transition);
+}
+.comment-input:focus { outline: none; border-color: var(--primary); }
+.comment-form-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.comment-hint { font-size: 12px; color: var(--text-muted); }
+
+.cmt-loading, .cmt-empty { font-size: 13px; color: var(--text-muted); text-align: center; padding: 24px 0; }
+
+.comment-list { display: flex; flex-direction: column; gap: 1px; }
+.comment-item { display: flex; gap: 10px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.comment-item:last-child { border-bottom: none; }
+
+.cmt-avatar { flex-shrink: 0; }
+.cmt-img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
+.cmt-initial {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+}
+
+.cmt-body { flex: 1; min-width: 0; }
+.cmt-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.cmt-name { font-size: 13px; font-weight: 700; color: var(--text); }
+.cmt-date { font-size: 12px; color: var(--text-muted); }
+.cmt-del-btn {
+  margin-left: auto; font-size: 12px; color: var(--text-muted);
+  background: none; border: none; cursor: pointer; padding: 0;
+}
+.cmt-del-btn:hover { color: var(--danger); }
+.cmt-text { font-size: 14px; color: var(--text); line-height: 1.6; white-space: pre-wrap; }
 </style>
