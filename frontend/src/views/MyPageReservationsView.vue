@@ -92,6 +92,10 @@
                 <span class="detail-val">#{{ r.id }}</span>
               </div>
               <div class="detail-row">
+                <span class="detail-key">예약 일시</span>
+                <span class="detail-val">{{ formatDate(r.reservedAt) }}</span>
+              </div>
+              <div class="detail-row">
                 <span class="detail-key">서비스</span>
                 <span class="detail-val">{{ r.serviceName }} ({{ r.serviceDuration }}분)</span>
               </div>

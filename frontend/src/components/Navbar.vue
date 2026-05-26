@@ -102,7 +102,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/authStore'
 import { useNotificationStore } from '@/stores/notificationStore'
@@ -113,6 +113,19 @@ const router = useRouter()
 const mobileOpen = ref(false)
 const notifOpen = ref(false)
 const bellEl = ref(null)
+
+// 로그인 상태 변화 감지 → SSE 연결/해제
+// auth.token이 설정된 뒤 auth.isLoggedIn이 true가 되므로 token 값도 안전하게 읽을 수 있음
+watch(
+  () => auth.isLoggedIn,
+  (loggedIn) => {
+    if (loggedIn) {
+      notif.connect(auth.user?.id, auth.token)
+    } else {
+      notif.disconnect()
+    }
+  }
+)
 
 async function handleLogout() {
   await auth.logout()
@@ -135,7 +148,13 @@ function onClickOutside(e) {
   if (bellEl.value && !bellEl.value.contains(e.target)) notifOpen.value = false
 }
 
-onMounted(() => document.addEventListener('click', onClickOutside))
+onMounted(() => {
+  document.addEventListener('click', onClickOutside)
+  // 새로고침 등으로 이미 로그인된 상태라면 즉시 SSE 연결
+  if (auth.isLoggedIn) {
+    notif.connect(auth.user?.id, auth.token)
+  }
+})
 onUnmounted(() => document.removeEventListener('click', onClickOutside))
 </script>
 

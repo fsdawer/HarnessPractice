@@ -14,6 +14,7 @@ import beauty.beauty.user.entity.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -28,6 +29,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -39,6 +41,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final ReservationRepository reservationRepository;
     private final UserCouponRepository userCouponRepository;
     private final ChatService chatService;
+    private final StringRedisTemplate stringRedisTemplate;
     private final TransactionTemplate transactionTemplate; // 외부 API와 트랜잭션 분리용
 
     @Value("${toss.secret-key}")
@@ -193,9 +196,11 @@ public class PaymentServiceImpl implements PaymentService {
 
         // [Flow 3] DB 상태 업데이트 (DB 트랜잭션 O)
         // 토스 서버 결제가 성공적으로 완료되었으므로, 결제(PAID) 및 예약(CONFIRMED) 상태를 최종 반영합니다.
-        return transactionTemplate.execute(status -> {
+        PaymentResponse[] result = new PaymentResponse[1];
+        long[] confirmedReservationId = new long[1];
+        transactionTemplate.execute(status -> {
             Payment paymentToUpdate = paymentRepository.findById(validatedPayment.getId()).orElseThrow();
-            
+
             paymentToUpdate.setStatus(Payment.PayStatus.PAID);
             paymentToUpdate.setPaymentKey(request.getPaymentKey());
             paymentToUpdate.setPaidAt(LocalDateTime.now());
@@ -207,8 +212,19 @@ public class PaymentServiceImpl implements PaymentService {
             // [Flow 4] 결제 확정 즉시 1:1 채팅방 생성
             chatService.createRoomForReservation(reservation);
 
-            return PaymentResponse.from(paymentToUpdate);
+            result[0] = PaymentResponse.from(paymentToUpdate);
+            confirmedReservationId[0] = reservation.getId();
+            return null;
         });
+
+        // [Flow 5] 트랜잭션 커밋 후 Stream 이벤트 발행 — 랭킹·알림을 비동기로 처리
+        stringRedisTemplate.opsForStream().add(
+                "reservation-events",
+                Map.of("reservationId", String.valueOf(confirmedReservationId[0]))
+        );
+        log.info("[Payment] 결제 확정 Stream 발행 — reservationId={}", confirmedReservationId[0]);
+
+        return result[0];
     }
 
 

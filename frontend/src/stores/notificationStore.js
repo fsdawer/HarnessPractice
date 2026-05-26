@@ -23,6 +23,8 @@ export const useNotificationStore = defineStore('notification', () => {
       message: msg.message,
       detail: msg.type === 'RESERVATION_CREATED'
         ? `${msg.clientName} · ${formatDateTime(msg.reservedAt)}`
+        : msg.type === 'RESERVATION_CANCELLED'
+        ? `${msg.clientName} · ${formatDateTime(msg.reservedAt)}`
         : msg.type === 'WAITING_AVAILABLE'
         ? `지금 바로 예약하세요 · ${formatDateTime(msg.reservedAt)}`
         : msg.type === 'RESERVATION_REMINDER_1D'

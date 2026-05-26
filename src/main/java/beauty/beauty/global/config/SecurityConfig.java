@@ -55,9 +55,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/ranking").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/community", "/api/community/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/payments/cancel-pending").permitAll()
                         .requestMatchers("/login/oauth2/**", "/oauth2/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
+                        // EventSource는 Authorization 헤더를 지원하지 않아 ?token= 쿼리파라미터로 인증함
+                        // JwtAuthFilter가 토큰을 읽어 SecurityContext에 설정하므로 permitAll 해도 인증은 유지됨
+                        .requestMatchers("/api/notifications/stream").permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth -> oauth

@@ -4,6 +4,12 @@
 > **해결**: 광고 없이 위치·취향·예산 기반으로 미용사를 매칭하는 개인화 예약 앱
 > 상세 개요: `.claude/docs/project-overview.md`
 
+## ⛔ 절대 규칙: planner-agent 우선 호출
+모든 구현·수정·기능 요청 시 **planner-agent를 반드시 먼저 호출**한다.
+planner가 요청을 분석하고 필요한 에이전트를 선택·지시한다.
+**예외**: 단순 질문·코드 설명·오타·1줄 수정만 직접 처리 가능.
+이 규칙을 건너뛰는 것은 허용되지 않는다.
+
 ## 행동 원칙
 1. **생각 먼저** — 불확실하면 가정 말고 물어본다. 여러 해석이 있으면 트레이드오프 제시.
 2. **최소한의 코드** — 요청된 것만. 200줄이 50줄 가능하면 다시 써라.
@@ -15,7 +21,7 @@
 ## 기술 스택
 - Backend: Spring Boot 4.0.3 / Java 17 / JPA + MySQL
 - Frontend: Vue.js 3 (Vite) + Pinia + Vue Router
-- Auth: JWT (jjwt 0.12.6) + Spring Security + OAuth2 (Kakao/Naver)
+- Auth: JWT (jwt 0.12.6) + Spring Security + OAuth2 (Kakao/Naver)
 - Redis: 캐시·Pub/Sub·분산락·Stream·랭킹ZSET·rate-limit
 - 외부: 토스페이먼츠 v2, 네이버 SMTP, WebSocket(채팅), spring-dotenv
 

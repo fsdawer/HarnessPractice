@@ -354,6 +354,7 @@ async function handlePay() {
   if (!selectedServiceId.value) { payError.value = '서비스를 선택해주세요.'; return }
 
   paying.value = true
+  let reservationId = null
   try {
     const reservedAt = `${selectedDate.value}T${selectedTime.value}:00`
     const resRes = await reservationApi.create({
@@ -362,7 +363,7 @@ async function handlePay() {
       reservedAt,
       requestMemo: requestMemo.value,
     })
-    const reservationId = resRes.data.id
+    reservationId = resRes.data.id
 
     const prepRes = await paymentApi.prepare({ reservationId, method: 'TOSS' })
     const { orderId } = prepRes.data
@@ -385,6 +386,9 @@ async function handlePay() {
     })
   } catch (e) {
     if (e?.code === 'PAY_PROCESS_CANCELED' || e?.code === 'USER_CANCEL') {
+      if (reservationId) {
+        try { await reservationApi.cancel(reservationId) } catch {}
+      }
       paying.value = false
       return
     }
