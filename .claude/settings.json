@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew*)",
+      "Bash(echo*)",
+      "Bash(mkdir*)",
+      "Bash(cat*)",
+      "Bash(ls*)",
+      "Bash(find*)",
+      "Bash(grep*)",
+      "Bash(git*)",
+      "Bash(npm*)",
+      "Bash(cd*)",
+      "Bash(cp*)",
+      "Bash(mv*)"
+    ]
+  },
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"⚠️ [필수] 모든 구현·수정·기능 요청은 planner-agent를 먼저 호출해야 합니다. planner가 요청을 분석하고 적절한 에이전트를 선택합니다. 단순 질문·코드 설명·1줄 수정은 제외.\"}}'",
+            "statusMessage": "planner-agent 강제 실행 규칙 적용 중..."
+          }
+        ]
+      }
+    ]
+  }
+}

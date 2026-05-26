@@ -13,7 +13,9 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -49,6 +51,26 @@ public class NotificationService {
     }
 
 
+
+    // 취소 알림: 엔티티 대신 primitive 값을 받음
+    // — afterCommit() 콜백에서 호출되면 JPA 세션이 닫혀 lazy 연관관계 접근 불가하므로
+    //   @Transactional 범위 안에서 미리 추출한 값을 전달받아 처리함
+    @Async("reservationTaskExecutor")
+    public void notifyReservationCancelled(Long reservationId, Long stylistUserId, Long clientUserId,
+                                            String stylistName, String clientName, LocalDateTime reservedAt) {
+        NotificationMessage msg = NotificationMessage.builder()
+                .type("RESERVATION_CANCELLED")
+                .reservationId(reservationId)
+                .stylistName(stylistName)
+                .clientName(clientName)
+                .reservedAt(reservedAt.toString())
+                .message("예약이 취소되었습니다.")
+                .dedupKey("RESERVATION_CANCELLED:" + reservationId)
+                .build();
+
+        sendAndPersist(stylistUserId, msg);
+        sendAndPersist(clientUserId, msg);
+    }
 
     @Async("reservationTaskExecutor")
     public void notifyWaitingAvailable(Long userId, LocalDate date, LocalTime time) {
@@ -111,6 +133,7 @@ public class NotificationService {
     // 재연결 시 미전달 알림 원자적 조회·삭제 (RENAME → range → delete)
     public List<NotificationMessage> flushPending(Long userId) {
         String key    = PENDING_KEY_PREFIX + userId;
+        if (!Boolean.TRUE.equals(stringRedisTemplate.hasKey(key))) return List.of();
         String tmpKey = key + ":flush";
         stringRedisTemplate.rename(key, tmpKey);
         List<String> raw = stringRedisTemplate.opsForList().range(tmpKey, 0, -1);
@@ -119,7 +142,7 @@ public class NotificationService {
         if (raw == null || raw.isEmpty()) return List.of();
 
         // leftPush로 최신이 앞에 있으므로 reverse → 오래된 순서로 반환 (프론트에서 unshift 시 최신이 위로)
-        java.util.Collections.reverse(raw);
+        Collections.reverse(raw);
         return raw.stream()
                 .map(json -> {
                     try { return redisObjectMapper.readValue(json, NotificationMessage.class); }

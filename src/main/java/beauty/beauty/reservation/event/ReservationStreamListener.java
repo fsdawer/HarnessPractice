@@ -88,7 +88,7 @@ public class ReservationStreamListener implements StreamListener<String, MapReco
                 log.error("[Redis Stream] 랭킹 재계산 실패 - reservationId: {}", reservationId, e);
             }
 
-            // [Flow 3] 타 도메인 로직 호출 - 2 (WebSocket/Push 알림 발송)
+            // [Flow 3] 타 도메인 로직 호출 - 2 (알림 발송)
             try {
                 notificationService.notifyReservationCreated(reservation);
             } catch (Exception e) {

@@ -4,7 +4,10 @@ import beauty.beauty.chat.entity.ChatRoom;
 import beauty.beauty.chat.repository.ChatRoomRepository;
 import beauty.beauty.chat.service.ChatService;
 import beauty.beauty.global.exception.CustomException;
+import beauty.beauty.notification.service.NotificationService;
 import beauty.beauty.global.exception.ErrorCode;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import beauty.beauty.reservation.dto.CursorResponse;
 import beauty.beauty.reservation.dto.ReservationRequest;
 import beauty.beauty.reservation.dto.ReservationResponse;
@@ -73,6 +76,8 @@ public class ReservationServiceImpl implements ReservationService {
     private final StringRedisTemplate stringRedisTemplate;
     private final RedisTemplate<String, Object> redisTemplate;
     private final TransactionTemplate transactionTemplate;
+    private final NotificationService notificationService;
+    private final CacheManager cacheManager;
 
     private static final String UPLOAD_DIR = "uploads/reservation-images/";
 
@@ -148,37 +153,22 @@ public class ReservationServiceImpl implements ReservationService {
                         .stylistProfile(stylist)
                         .service(stylistServiceItem)
                         .reservedAt(request.getReservedAt())
-                        .status(Reservation.Status.CONFIRMED)
+                        .status(Reservation.Status.PENDING)
                         .requestMemo(request.getRequestMemo())
                         .totalPrice(stylistServiceItem.getPrice())
                         .createdAt(LocalDateTime.now())
                         .build();
 
                 // [Flow 3] 예약 정보 DB 저장
-                // 여기서 DB INSERT 쿼리가 발생합니다.
                 Reservation saved = reservationRepository.save(reservation);
-                ChatRoom chatRoom = chatService.createRoomForReservation(saved);
-
-                // [Flow 4] 이벤트 발행 (Redis Streams Publish)
-                // DB 커밋 완료 후 Stream 발행 — 롤백 시 메시지가 남는 문제를 방지하기 위해 
-                // TransactionSynchronizationManager.afterCommit() 시점에 발송합니다.
-                long savedId = saved.getId();
-                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                    @Override
-                    public void afterCommit() {
-                        // 통신 오버헤드를 막기 위해 무거운 객체(Reservation) 대신 reservationId 단일 값만 던집니다.
-                        stringRedisTemplate.opsForStream().add(
-                                "reservation-events",
-                                Map.of("reservationId", String.valueOf(savedId))
-                        );
-                        log.info("[Reservation] Stream 발행 완료 — reservationId={}", savedId);
-                    }
-                });
 
                 log.info("[Reservation] 예약 생성 완료 — reservationId={}, stylistId={}, userId={}",
                         saved.getId(), stylist.getId(), userId);
 
-                return ReservationResponse.from(saved, chatRoom.getId());
+                // Stream 이벤트는 결
+                // 제 확정(CONFIRMED) 시점에 발행합니다.
+                // PENDING 단계에서 발행하면 미결제 예약도 랭킹·알림을 트리거하는 문제가 있습니다.
+                return ReservationResponse.from(saved, null);
             });
         } finally {
             // [Flow 5] Redis 락 해제
@@ -281,13 +271,11 @@ public class ReservationServiceImpl implements ReservationService {
 
 
     // 5. 예약 취소
-    // @CacheEvict(allEntries=true): 취소된 슬롯이 다시 비어야 하므로 캐시를 무효화해야 함
-    // 그런데 캐시 키(stylistId:날짜)를 만들려면 reservationId로 DB를 먼저 읽어야 함
-    // @CacheEvict는 메서드 실행 전에 키를 평가하므로 이 시점에 stylistId를 알 수 없음
-    // → 어떤 키를 지워야 할지 모르니 booked_times 캐시 전체를 비움 (취소는 드문 작업이라 허용)
+    // @CacheEvict(key=...)는 메서드 실행 전에 SpEL 키를 평가하므로, reservationId로 DB를 먼저 읽어야 하는
+    // 이 상황에서는 사용할 수 없음. 대신 CacheManager를 직접 주입해 reservation을 조회한 뒤
+    // 정확한 키("stylistId:date")만 삭제함 → 다른 미용사/날짜 캐시는 건드리지 않음
     @Override
     @Transactional
-    @CacheEvict(value = "booked_times", allEntries = true)
     public void cancelReservation(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESERVATION_NOT_FOUND));
@@ -304,14 +292,29 @@ public class ReservationServiceImpl implements ReservationService {
         reservation.setStatus(Reservation.Status.CANCELLED);
         reservationRepository.save(reservation);
 
-        // 빈자리 알림 이벤트 발행 (Redis Streams)
-        long stylistId = reservation.getStylistProfile().getId(); // 예약된 미용사 아이디
-        LocalDate cancelDate = reservation.getReservedAt().toLocalDate(); // 예약 날짜
-        LocalTime cancelTime = reservation.getReservedAt().toLocalTime(); // 예약 시간
+        // 취소된 슬롯의 캐시 키("stylistId:date")만 정확히 삭제
+        // — 다른 미용사·다른 날짜 캐시는 그대로 유지
+        String evictKey = reservation.getStylistProfile().getId() + ":" +
+                          reservation.getReservedAt().toLocalDate().toString();
+        Cache cache = cacheManager.getCache("booked_times");
+        if (cache != null) cache.evict(evictKey);
+
+        // 트랜잭션이 열려 있는 지금 lazy 연관관계를 미리 읽어 primitive로 추출
+        // afterCommit()은 세션이 닫힌 뒤 실행되므로 엔티티를 직접 전달하면 LazyInitializationException 발생
+        long stylistId          = reservation.getStylistProfile().getId();
+        Long stylistUserId      = reservation.getStylistProfile().getUser().getId();
+        String stylistName      = reservation.getStylistProfile().getUser().getName();
+        Long clientUserId       = reservation.getUser().getId();
+        String clientName       = reservation.getUser().getName();
+        LocalDate cancelDate    = reservation.getReservedAt().toLocalDate();
+        LocalTime cancelTime    = reservation.getReservedAt().toLocalTime();
+        Long resId              = reservation.getId();
+        LocalDateTime reservedAt = reservation.getReservedAt();
 
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
+                // 빈자리 대기 알림 이벤트 (빈자리 알림 신청자 대상)
                 stringRedisTemplate.opsForStream().add(
                         "cancel_stream",
                         Map.of(
@@ -320,7 +323,12 @@ public class ReservationServiceImpl implements ReservationService {
                                 "time", cancelTime.toString()
                         )
                 );
-                log.info("[Waiting] 예약 취소 발생, 빈자리 알림 이벤트 발행 — stylistId={}, datetime={}", stylistId, reservation.getReservedAt());
+                log.info("[Waiting] 빈자리 이벤트 발행 — stylistId={}, datetime={}", stylistId, reservedAt);
+
+                // 취소 당사자(고객·미용사) SSE 알림
+                notificationService.notifyReservationCancelled(
+                        resId, stylistUserId, clientUserId, stylistName, clientName, reservedAt);
+                log.info("[Notify] 취소 알림 발송 — reservationId={}, client={}, stylist={}", resId, clientUserId, stylistUserId);
             }
         });
     }

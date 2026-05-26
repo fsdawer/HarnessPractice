@@ -21,15 +21,14 @@
           class="room-item card"
         >
           <div class="room-avatar">
-            <img v-if="r.partnerProfileImg" :src="r.partnerProfileImg" alt="" class="avatar-img" />
-            <div v-else class="avatar-initial">{{ (r.partnerName || '?')[0] }}</div>
+            <div class="avatar-initial">{{ (partnerName(r) || '?')[0] }}</div>
           </div>
           <div class="room-body">
             <div class="room-top">
-              <span class="room-name">{{ r.partnerName }}</span>
+              <span class="room-name">{{ partnerName(r) }}</span>
               <span v-if="r.lastMessageAt" class="room-time">{{ formatTime(r.lastMessageAt) }}</span>
             </div>
-            <p class="room-last-msg">{{ r.lastMessage || '메시지가 없습니다.' }}</p>
+            <p class="room-last-msg">{{ r.lastMessageContent || '메시지가 없습니다.' }}</p>
           </div>
           <div v-if="r.unreadCount > 0" class="unread-badge">{{ r.unreadCount }}</div>
         </RouterLink>
@@ -41,7 +40,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { chatApi } from '@/api/chat'
+import { useAuthStore } from '@/stores/authStore'
 
+const auth = useAuthStore()
 const rooms = ref([])
 const loading = ref(true)
 
@@ -54,6 +55,10 @@ function formatTime(s) {
   if (diff < 3600) return `${Math.floor(diff / 60)}분 전`
   if (diff < 86400) return `${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`
   return `${d.getMonth()+1}/${d.getDate()}`
+}
+
+function partnerName(r) {
+  return auth.user?.id === r.userId ? r.stylistUserName : r.userName
 }
 
 onMounted(async () => {

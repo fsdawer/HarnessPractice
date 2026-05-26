@@ -171,7 +171,7 @@ async function search() {
     if (activeFilter.value !== 'all') params.category = activeFilter.value
     if (sortBy.value) params.sort = sortBy.value
     const res = await stylistApi.getStylists(params)
-    stylists.value = res.data
+    stylists.value = res.data.content || []
   } catch { stylists.value = [] }
   finally { loading.value = false }
 }
