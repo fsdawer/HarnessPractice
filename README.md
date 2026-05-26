@@ -41,41 +41,58 @@ cd frontend && npm run dev      # 프론트 :5173
 
 ---
 
-## AI 개발 워크플로우 (Claude Code 멀티에이전트)
+## AI 활용 방식
 
-이 프로젝트는 **Claude Code의 에이전트·스킬·하네스 시스템**을 실제 개발 워크플로우에 통합해 운영했습니다.
+단순 코드 자동완성이 아닌, 실제 개발 팀 구조를 AI 에이전트로 설계해 운영했습니다.
 
 ### 에이전트 구성 (`.claude/agents/`)
 
-기능 단위로 역할을 분리한 4개 전문 에이전트를 정의하고, 메인 Claude(팀장)가 태스크를 분배·통합합니다.
+각 에이전트는 역할과 도구 접근 권한을 명시적으로 제한했습니다. 역할을 벗어난 동작은 구조적으로 차단됩니다.
 
 | 에이전트 | 역할 | 제약 |
 |---|---|---|
-| `planner-agent` | 설계·태스크 분해. 구현 계획 수립 | 코드 수정 금지 |
-| `backend-agent` | Spring Boot + Vue.js 구현. git worktree 격리 작업 | worktree 필수 |
-| `test-agent` | 단위·통합 테스트 작성 및 실행 | `src/main/` 수정 금지 |
-| `review-agent` | 보안·성능·컨벤션 코드 리뷰 | 수정 금지, 리포트만 |
+| `planner` | 요청 분석 · 구현 계획 수립 · 에이전트 지휘 | 코드 수정 불가 (Read/Grep만 허용) |
+| `backend` | 엔티티 / 서비스 / 컨트롤러 구현 | git worktree 격리 환경에서만 작업 |
+| `frontend` | Vue.js api / 뷰 / 컴포넌트 구현 | git worktree 격리 환경에서만 작업 |
+| `test` | 테스트 작성 · 실행 | `src/main/` 수정 불가 |
+| `review` | 보안 / 성능 / 컨벤션 코드리뷰 | 코드 수정 불가, 피드백만 허용 |
+| `ux` | 사용자 여정 · 화면 흐름 설계 | 코드 수정 불가 |
+| `architecture` | 기술 의사결정 · 설계 트레이드오프 분석 | 코드 수정 불가 |
 
-**병합 조건:** `./gradlew test` 전체 통과 + review-agent PASS → `git merge --no-ff` → worktree 삭제
+### 기능 구현 흐름
 
-### 스킬 시스템 (`.claude/skills/`)
+```
+요청
+ └─ planner       → 요청 분석 · 에이전트 선택 · 구현 계획 수립
+     └─ ux         → 사용자 여정 · 화면 흐름 설계
+     └─ architecture → 기술 설계 · 트레이드오프 분석
+         └─ [worktree 생성] feature/<기능명> 브랜치 격리
+             ├─ backend   → 백엔드 구현 (병렬)
+             └─ frontend  → 프론트엔드 구현 (병렬)
+                 └─ test   → 테스트 작성 · 실행
+                     └─ review → 코드리뷰
+                         └─ [병합 조건 충족 시] main merge
+```
 
-반복적으로 필요한 워크플로우를 재사용 가능한 스킬로 정의해 컨텍스트 효율을 높였습니다.
+backend와 frontend는 독립적인 작업이므로 병렬 실행합니다.
 
-| 스킬 | 목적 |
-|---|---|
-| `feature-implementation` | 설계→구현→테스트→리뷰 7단계 플로우 |
-| `bug-fix` | 재현→원인 분석→수정→회귀 테스트 플로우 |
-| `code-review` | 🔴 블로커 / 🟡 경고 / 🟢 제안 3단계 심각도 리뷰 |
-| `explain-code` | 입력→처리 플로우→출력 구조로 코드 설명 |
-| `db-access-guard` | DB 직접 접근 패턴 8가지 금지 규칙 가드 |
-| `portfolio-prep` | 면접 예상 질문 + 꼬리질문 체인 생성 |
+### 병합 조건 (3단계 품질 게이트)
 
-### 하네스(Harness) 활용
+모든 조건을 통과해야만 main 브랜치에 병합합니다.
 
-- **SessionStart hook:** 매 세션마다 프로젝트 컨텍스트(기술 스택, 도메인 구조, 주의사항)를 자동 주입해 에이전트가 cold-start 없이 일관된 판단을 내릴 수 있도록 구성
-- **Auto memory:** 사용자 피드백·프로젝트 결정사항을 파일 기반 메모리에 지속 저장해 세션 간 컨텍스트 연속성 확보
-- **worktree 격리:** backend-agent는 반드시 별도 worktree에서 작업해 main 브랜치에 미완성 코드가 유입되는 것을 차단
+```
+1. 빌드 성공    ./gradlew build -x test && cd frontend && npm run build
+2. 테스트 통과  ./gradlew test (전체)
+3. 리뷰 PASS   review-agent 블로커 0건
+```
+
+### 설계 의도
+
+- **worktree 격리:** backend/frontend 에이전트가 main 브랜치를 직접 건드리지 못하도록 강제했습니다. 구현 중 실패해도 main은 항상 clean 상태를 유지합니다.
+- **도구 권한 분리:** planner가 코드를 직접 수정하거나, test-agent가 구현 코드를 고쳐 테스트를 통과시키는 문제를 도구 접근 제한으로 구조적으로 차단했습니다.
+- **계획 먼저, 승인 후 실행:** planner가 구현 계획과 트레이드오프를 먼저 제시하고 확인 후 에이전트를 투입합니다. 방향이 틀린 채 구현이 진행되는 상황을 방지합니다.
+- **스킬 시스템:** `feature-implementation`, `bug-fix`, `code-review` 등 반복 워크플로우를 재사용 가능한 스킬로 정의해 매 세션마다 동일한 품질 기준이 적용되도록 구성했습니다.
+- **Auto memory:** 사용자 피드백·프로젝트 결정사항을 파일 기반 메모리에 지속 저장해 세션 간 컨텍스트 연속성을 확보했습니다.
 
 ---
 
