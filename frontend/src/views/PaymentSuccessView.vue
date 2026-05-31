@@ -53,7 +53,6 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { paymentApi } from '@/api/payment'
 import { reservationApi } from '@/api/reservation'
-import { couponApi } from '@/api/coupon'
 
 const route  = useRoute()
 const router = useRouter()
@@ -79,16 +78,13 @@ onMounted(async () => {
     // Toss 리다이렉트: paymentKey와 amount가 있으면 백엔드 승인 처리
     if (paymentKey.value && amount.value) {
       try {
+        // 쿠폰 할인은 prepare() 단계에서 이미 적용됨.
+        // confirm은 Toss 결제 완료를 백엔드에서 검증하고 예약을 CONFIRMED로 전환하는 역할.
         await paymentApi.confirm({
           paymentKey: paymentKey.value,
           orderId: orderId.value,
           amount: amount.value,
         })
-        const pendingCouponId = sessionStorage.getItem('pendingCouponId')
-        if (pendingCouponId) {
-          try { await couponApi.useCoupon(Number(pendingCouponId)) } catch {}
-          sessionStorage.removeItem('pendingCouponId')
-        }
       } catch (e) {
         const msg = e.response?.data?.message || ''
         // "이미 결제 완료" = 새로고침 재시도 → 그냥 결제 내역 조회로 이어감

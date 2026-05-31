@@ -2,10 +2,33 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '@/api/auth'
 
+/** JWT payload의 exp(만료 시각, 초 단위)를 검사해 만료 여부 반환 */
+function isTokenExpired(jwt) {
+  try {
+    const payload = JSON.parse(atob(jwt.split('.')[1]))
+    return payload.exp * 1000 < Date.now()
+  } catch {
+    return true // 파싱 실패 = 유효하지 않은 토큰
+  }
+}
+
+/** localStorage에서 토큰을 읽되, 만료됐으면 즉시 삭제하고 null 반환 */
+function loadToken() {
+  const raw = localStorage.getItem('token')
+  if (!raw) return null
+  if (isTokenExpired(raw)) {
+    localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
+    localStorage.removeItem('user')
+    return null
+  }
+  return raw
+}
+
 export const useAuthStore = defineStore('auth', () => {
-  const user         = ref(JSON.parse(localStorage.getItem('user') || 'null'))
-  const token        = ref(localStorage.getItem('token') || null)
-  const refreshToken = ref(localStorage.getItem('refreshToken') || null)
+  const token        = ref(loadToken())
+  const user         = ref(token.value ? JSON.parse(localStorage.getItem('user') || 'null') : null)
+  const refreshToken = ref(token.value ? localStorage.getItem('refreshToken') : null)
 
   const isLoggedIn = computed(() => !!token.value)
   const isStylist  = computed(() => user.value?.role === 'STYLIST')

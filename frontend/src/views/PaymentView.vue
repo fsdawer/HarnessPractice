@@ -156,12 +156,15 @@ async function handlePay() {
   paying.value = true
   payError.value = ''
   try {
+    console.log('[Pay] ① selectedCouponId:', selectedCouponId.value)
     const prepRes = await paymentApi.prepare({
       reservationId: reservation.value.id,
       method: 'TOSS',
       userCouponId: selectedCouponId.value ?? null,
     })
+    console.log('[Pay] ② prepRes.data:', prepRes.data)
     const { orderId, amount } = prepRes.data
+    console.log('[Pay] ③ Toss에 전달 — orderId:', orderId, 'amount:', amount)
 
     const tossPayments = window.TossPayments(import.meta.env.VITE_TOSS_CLIENT_KEY)
     const payment = tossPayments.payment({ customerKey: window.TossPayments.ANONYMOUS })

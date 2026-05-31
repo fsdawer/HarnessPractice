@@ -63,15 +63,26 @@ export const useNotificationStore = defineStore('notification', () => {
   let retryTimer = null
   let currentUserId = null
   let currentToken = null
+  let retryCount = 0
+  const MAX_RETRIES = 5
 
   function connect(userId, token) {
     if (eventSource) return
+    if (!token) return  // 토큰 없으면 연결 자체를 하지 않음
     currentUserId = userId
     currentToken  = token
+    retryCount    = 0
     _open()
   }
 
   function _open() {
+    // 토큰이 사라졌거나 재시도 한도 초과 시 중단
+    if (!currentToken) return
+    if (retryCount >= MAX_RETRIES) {
+      console.warn('[SSE] 최대 재시도 초과 — 연결 포기')
+      return
+    }
+
     const url = `http://localhost:8080/api/notifications/stream?token=${encodeURIComponent(currentToken)}`
     eventSource = new EventSource(url)
 
@@ -85,6 +96,7 @@ export const useNotificationStore = defineStore('notification', () => {
 
     eventSource.onopen = () => {
       connected.value = true
+      retryCount = 0  // 연결 성공 시 재시도 카운터 초기화
       if (retryTimer) { clearTimeout(retryTimer); retryTimer = null }
     }
 
@@ -94,6 +106,7 @@ export const useNotificationStore = defineStore('notification', () => {
       connected.value = false
       if (eventSource?.readyState === EventSource.CLOSED) {
         eventSource = null
+        retryCount++
         retryTimer = setTimeout(_open, 5000)
       }
     }
