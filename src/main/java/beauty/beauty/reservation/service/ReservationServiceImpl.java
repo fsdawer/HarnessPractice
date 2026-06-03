@@ -329,6 +329,16 @@ public class ReservationServiceImpl implements ReservationService {
                 notificationService.notifyReservationCancelled(
                         resId, stylistUserId, clientUserId, stylistName, clientName, reservedAt);
                 log.info("[Notify] 취소 알림 발송 — reservationId={}, client={}, stylist={}", resId, clientUserId, stylistUserId);
+
+                // 자동 환불 트리거 — 결제 상태가 PAID이면 환불 처리
+                stringRedisTemplate.opsForStream().add(
+                        "reservation-cancel-refund-stream",
+                        Map.of(
+                                "reservationId", String.valueOf(resId),
+                                "userId", String.valueOf(clientUserId)
+                        )
+                );
+                log.info("[Refund] 자동 환불 이벤트 발행 — reservationId={}, userId={}", resId, clientUserId);
             }
         });
     }

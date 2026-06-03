@@ -57,6 +57,26 @@ public class RedisStreamConfig {
                 // 이미 존재함 에러 무시
             }
         }
+
+        // 예약 취소 → 자동 환불 Stream 초기화
+        initStream("reservation-cancel-refund-stream", "refund-group");
+    }
+
+    private void initStream(String streamKey, String groupName) {
+        try {
+            boolean streamExists = Boolean.TRUE.equals(stringRedisTemplate.hasKey(streamKey));
+            if (!streamExists) {
+                stringRedisTemplate.opsForStream().createGroup(streamKey, groupName);
+                log.info("[Redis Stream] 스트림 및 컨슈머 그룹 생성 완료: {}", streamKey);
+            }
+        } catch (Exception e) {
+            try {
+                stringRedisTemplate.opsForStream().createGroup(streamKey, groupName);
+                log.info("[Redis Stream] 기존 스트림에 컨슈머 그룹 생성 완료: {}", groupName);
+            } catch (Exception ex) {
+                // 이미 존재함 에러 무시
+            }
+        }
     }
 
     @Bean
