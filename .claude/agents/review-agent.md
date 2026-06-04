@@ -1,7 +1,7 @@
 ---
 name: review-agent
 description: 코드 리뷰 담당. 보안, 성능, 컨벤션 위반을 검토한다. 코드를 직접 수정하지 않는다. test-agent 이후, 병합 전 마지막으로 호출된다.
-tools: Read, Grep, Glob, SendMessage
+tools: Read, Grep, Glob, Bash, SendMessage
 model: sonnet
 ---
 
@@ -50,12 +50,19 @@ echo "[$(date '+%H:%M:%S')] ✅ [review] 전체 완료" >> .claude/logs/review.l
 - [ ] N+1 쿼리: 루프 내 `findById` 호출
 - [ ] `FetchType.EAGER` 사용 여부
 
-**컨벤션**
+**컨벤션 — 백엔드**
 - [ ] `@Transactional` 누락
 - [ ] Jackson 3.x 패키지 (`tools.jackson.*`) 사용 여부 (`com.fasterxml` 금지)
 - [ ] `@Builder.Default` 누락
 - [ ] `@LoginUserId` 없이 userId를 요청 파라미터로 수신
 - [ ] Redis DTO `@Setter` 누락
+
+**컨벤션 — 프론트엔드**
+- [ ] 새 axios 인스턴스 생성 여부 (`api.js` 재사용 필수)
+- [ ] `loading` / `error` 상태 처리 누락
+- [ ] Kakao Maps: `autoload=false` + `kakao.maps.load(callback)` 패턴 준수 여부
+- [ ] `v-if` 후 `await nextTick()` 누락 (Kakao Maps 렌더링 문제)
+- [ ] Pinia store 직접 변이 (`store.value = ...`) 여부 (`$patch` 또는 action 사용 필수)
 
 **권한**
 - [ ] 본인 리소스만 수정/삭제 가능한지 확인

@@ -8,6 +8,7 @@ import beauty.beauty.payment.repository.PaymentRepository;
 import beauty.beauty.payment.service.PaymentService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import beauty.beauty.global.config.RedisStreamConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.connection.stream.Consumer;
@@ -39,9 +40,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PaymentCancelStreamListener implements StreamListener<String, MapRecord<String, String, String>> {
 
-    private static final String STREAM_KEY = "reservation-cancel-refund-stream";
-    private static final String CONSUMER_GROUP = "refund-group";
-    private static final String CONSUMER_NAME = "refund-consumer-1";
 
     private final PaymentRepository paymentRepository;
     private final PaymentService paymentService;
@@ -54,14 +52,14 @@ public class PaymentCancelStreamListener implements StreamListener<String, MapRe
     public void init() {
         // [입력] Consumer Group 구독 설정 (Stream/Group 초기화는 RedisStreamConfig에서 일원화)
         this.subscription = listenerContainer.receive(
-                Consumer.from(CONSUMER_GROUP, CONSUMER_NAME),
-                StreamOffset.create(STREAM_KEY, ReadOffset.lastConsumed()),
+                Consumer.from(RedisStreamConfig.REFUND_CONSUMER_GROUP, RedisStreamConfig.REFUND_CONSUMER_NAME),
+                StreamOffset.create(RedisStreamConfig.REFUND_STREAM_KEY, ReadOffset.lastConsumed()),
                 this
         );
         if (!listenerContainer.isRunning()) {
             listenerContainer.start();
         }
-        log.info("[PaymentCancel Stream] 구독 시작 — stream={}, group={}", STREAM_KEY, CONSUMER_GROUP);
+        log.info("[PaymentCancel Stream] 구독 시작 — stream={}, group={}", RedisStreamConfig.REFUND_STREAM_KEY, RedisStreamConfig.REFUND_CONSUMER_GROUP);
     }
 
     @PreDestroy
@@ -124,6 +122,6 @@ public class PaymentCancelStreamListener implements StreamListener<String, MapRe
     }
 
     private void ack(MapRecord<String, String, String> message) {
-        stringRedisTemplate.opsForStream().acknowledge(STREAM_KEY, CONSUMER_GROUP, message.getId());
+        stringRedisTemplate.opsForStream().acknowledge(RedisStreamConfig.REFUND_STREAM_KEY, RedisStreamConfig.REFUND_CONSUMER_GROUP, message.getId());
     }
 }

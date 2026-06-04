@@ -3,6 +3,7 @@ package beauty.beauty.reservation.event;
 import beauty.beauty.notification.service.NotificationService;
 import beauty.beauty.reservation.entity.Waiting;
 import beauty.beauty.reservation.repository.WaitingRepository;
+import beauty.beauty.global.config.RedisStreamConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -35,9 +36,6 @@ public class CancelStreamListener implements StreamListener<String, MapRecord<St
     private final WaitingRepository waitingRepository;
     private final NotificationService notificationService;
     private final StringRedisTemplate stringRedisTemplate;
-    private static final String STREAM_KEY = "cancel_stream";
-    private static final String CONSUMER_GROUP = "waiting-group";
-    private static final String CONSUMER_NAME = "waiting-consumer-1";
 
     private final StreamMessageListenerContainer<String, MapRecord<String, String, String>> listenerContainer;
     private Subscription subscription;
@@ -45,13 +43,13 @@ public class CancelStreamListener implements StreamListener<String, MapRecord<St
     @PostConstruct
     public void init() {
         try {
-            boolean streamExists = Boolean.TRUE.equals(stringRedisTemplate.hasKey(STREAM_KEY));
+            boolean streamExists = Boolean.TRUE.equals(stringRedisTemplate.hasKey(RedisStreamConfig.CANCEL_STREAM_KEY));
             if (!streamExists) {
-                stringRedisTemplate.opsForStream().createGroup(STREAM_KEY, CONSUMER_GROUP);
+                stringRedisTemplate.opsForStream().createGroup(RedisStreamConfig.CANCEL_STREAM_KEY, RedisStreamConfig.CANCEL_CONSUMER_GROUP);
             }
         } catch (Exception e) {
             try {
-                stringRedisTemplate.opsForStream().createGroup(STREAM_KEY, CONSUMER_GROUP);
+                stringRedisTemplate.opsForStream().createGroup(RedisStreamConfig.CANCEL_STREAM_KEY, RedisStreamConfig.CANCEL_CONSUMER_GROUP);
             } catch (Exception ex) {
                 // ignore
             }
@@ -59,8 +57,8 @@ public class CancelStreamListener implements StreamListener<String, MapRecord<St
 
 
         this.subscription = listenerContainer.receive(
-                Consumer.from(CONSUMER_GROUP, CONSUMER_NAME),
-                StreamOffset.create(STREAM_KEY, ReadOffset.lastConsumed()),
+                Consumer.from(RedisStreamConfig.CANCEL_CONSUMER_GROUP, RedisStreamConfig.CANCEL_CONSUMER_NAME),
+                StreamOffset.create(RedisStreamConfig.CANCEL_STREAM_KEY, ReadOffset.lastConsumed()),
                 this
         );
         // listenerContainer.start()는 다른 리스너에서 이미 호출될 수 있으므로, 
@@ -108,12 +106,12 @@ public class CancelStreamListener implements StreamListener<String, MapRecord<St
             } while (waitingPage.hasNext());
 
             // [Flow 3] 모든 알림 처리가 끝난 후 안전하게 ACK 전송
-            stringRedisTemplate.opsForStream().acknowledge(STREAM_KEY, CONSUMER_GROUP, message.getId());
+            stringRedisTemplate.opsForStream().acknowledge(RedisStreamConfig.CANCEL_STREAM_KEY, RedisStreamConfig.CANCEL_CONSUMER_GROUP, message.getId());
             log.info("[Waiting Consumer] 알림 발송 및 ACK 완료 — MsgId: {}", message.getId());
 
         } catch (Exception e) {
             // ACK를 보내지 않았으므로 메시지는 Pending 상태로 남아 추후 재처리 가능
-            log.error("[Waiting Consumer] 빈자리 알림 처리 중 에러 발생: {}", e.getMessage());
+            log.error("[Waiting Consumer] 빈자리 알림 처리 중 에러 발생", e);
         }
     }
 

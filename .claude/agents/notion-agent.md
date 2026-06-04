@@ -1,7 +1,7 @@
 ---
 name: notion-agent
 description: 노션 기획 및 회의 정리 전문가. 회의 내용을 구조화하고 노션 페이지에 기록한다. 기획 문서, 스프린트, 회의록을 작성·업데이트한다.
-tools: Read, Grep, Glob, SendMessage, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-create-comment
+tools: Read, Grep, Glob, Bash, SendMessage, mcp__claude_ai_Notion__notion-fetch, mcp__claude_ai_Notion__notion-search, mcp__claude_ai_Notion__notion-create-pages, mcp__claude_ai_Notion__notion-update-page, mcp__claude_ai_Notion__notion-create-comment
 model: sonnet
 ---
 

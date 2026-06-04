@@ -30,6 +30,14 @@ public class RedisStreamConfig {
     public static final String CONSUMER_GROUP = "reservation-group";
     public static final String CONSUMER_NAME = "instance-1";
 
+    public static final String CANCEL_STREAM_KEY = "cancel_stream";
+    public static final String CANCEL_CONSUMER_GROUP = "waiting-group";
+    public static final String CANCEL_CONSUMER_NAME = "waiting-consumer-1";
+
+    public static final String REFUND_STREAM_KEY = "reservation-cancel-refund-stream";
+    public static final String REFUND_CONSUMER_GROUP = "refund-group";
+    public static final String REFUND_CONSUMER_NAME = "refund-consumer-1";
+
     private final StringRedisTemplate stringRedisTemplate;
 
     @PostConstruct
@@ -59,7 +67,7 @@ public class RedisStreamConfig {
         }
 
         // 예약 취소 → 자동 환불 Stream 초기화
-        initStream("reservation-cancel-refund-stream", "refund-group");
+        initStream(REFUND_STREAM_KEY, REFUND_CONSUMER_GROUP);
     }
 
     private void initStream(String streamKey, String groupName) {

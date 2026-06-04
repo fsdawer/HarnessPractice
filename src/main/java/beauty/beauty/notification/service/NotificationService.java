@@ -103,18 +103,25 @@ public class NotificationService {
     // SSE 즉시 전송 성공 시 Redis 저장 생략, 실패(연결 없음 포함) 시에만 보관
     // DB 히스토리는 항상 저장
     private void sendAndPersist(Long userId, NotificationMessage msg) {
+        log.info("[Notify] sendAndPersist 시작 - userId: {}, type: {}", userId, msg.getType());
+
         saveHistory(userId, msg);
 
         boolean delivered = sseEmitterService.send(userId, msg);
-        if (delivered) return;
+        if (delivered) {
+            log.info("[Notify] SSE 전송 완료 - userId: {}, type: {}", userId, msg.getType());
+            return;
+        }
 
+        log.info("[Notify] SSE 미연결 → Redis 보관 시도 - userId: {}, type: {}", userId, msg.getType());
         try {
             String key  = PENDING_KEY_PREFIX + userId;
             String json = redisObjectMapper.writeValueAsString(msg);
             stringRedisTemplate.opsForList().leftPush(key, json);
             stringRedisTemplate.expire(key, PENDING_TTL);
+            log.info("[Notify] Redis 보관 완료 - key: {}", key);
         } catch (Exception e) {
-            log.warn("알림 Redis 저장 실패 - userId: {}", userId, e);
+            log.warn("[Notify] Redis 저장 실패 - userId: {}", userId, e);
         }
     }
 
@@ -125,8 +132,9 @@ public class NotificationService {
                     .type(msg.getType())
                     .message(msg.getMessage())
                     .build());
+            log.info("[Notify] DB 히스토리 저장 완료 - userId: {}, type: {}", userId, msg.getType());
         } catch (Exception e) {
-            log.warn("알림 히스토리 DB 저장 실패 - userId: {}", userId, e);
+            log.warn("[Notify] 히스토리 DB 저장 실패 - userId: {}", userId, e);
         }
     }
 

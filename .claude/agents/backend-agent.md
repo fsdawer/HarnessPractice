@@ -72,9 +72,10 @@ SendMessage(to: "team-lead", message: "빌드 실패 - 도움 필요\n에러:\n<
 
 ## ❗ 완료 보고 (필수 - 건너뛸 수 없음)
 
-빌드 PASS 확인 후에만 전송:
+빌드 PASS 확인 후에만 전송. 회귀 검증이 필요한 경우 test-agent가 별도 실행한다.
+
 ```
-SendMessage(to: "team-lead", message: "백엔드 구현 완료\n변경 파일:\n- ...\n백엔드 빌드: PASS")
+SendMessage(to: "team-lead", message: "백엔드 구현 완료\n변경 파일:\n- ...\n백엔드 빌드: PASS\n회귀 주의 도메인: <연관 기능 목록>")
 ```
 
 참조 문서:

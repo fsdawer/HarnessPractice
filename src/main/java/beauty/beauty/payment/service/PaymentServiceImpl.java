@@ -105,9 +105,13 @@ public class PaymentServiceImpl implements PaymentService {
                 discountAmount = Math.min(discountAmount, coupon.getMaxDiscount());
             }
             appliedCoupon.use();
+            log.info("[Payment] 쿠폰 적용 — userCouponId={}, rate={}%, discount={}원",
+                    request.getUserCouponId(), coupon.getDiscountRate(), discountAmount);
         }
 
         int finalAmount = Math.max(0, originalAmount - discountAmount);
+        log.info("[Payment] prepare 금액 — original={}, discount={}, final={}",
+                originalAmount, discountAmount, finalAmount);
 
         // [Flow 3] 고유 주문번호(orderId) 생성 및 결제 엔티티 생성
         UUID uuid = UUID.randomUUID();
@@ -157,7 +161,11 @@ public class PaymentServiceImpl implements PaymentService {
                 throw new CustomException(ErrorCode.PAYMENT_ALREADY_PAID);
             }
 
+            // [진단 로그] 금액 비교 — 불일치 시 원인 추적용
+            log.info("[Payment] 금액 검증 — DB amount={}, 요청 amount={}, orderId={}",
+                    payment.getAmount(), request.getAmount(), request.getOrderId());
             if (payment.getAmount() != request.getAmount()) {
+                log.error("[Payment] 금액 불일치! DB={}, 요청={}", payment.getAmount(), request.getAmount());
                 throw new CustomException(ErrorCode.PAYMENT_AMOUNT_MISMATCH);
             }
             return payment;

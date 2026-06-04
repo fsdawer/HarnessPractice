@@ -70,10 +70,18 @@ void addPortfolio_imageUrlSaved() {
 
 테스트 작성 후 반드시 실행. 통과할 때까지 SendMessage 금지.
 
+**1단계 — 변경 기능 테스트:**
 ```bash
 cd <워크트리 경로>
 ./gradlew test --tests "beauty.beauty.<패키지>.*"
 ```
+
+**2단계 — 전체 회귀 테스트 (변경 기능 PASS 후 필수):**
+```bash
+cd <워크트리 경로>
+./gradlew test
+```
+변경한 파일만 테스트하지 말고 연관 기능 회귀 여부까지 반드시 검증.
 
 ### 테스트 실패 시 자가복구 절차 (최대 3회)
 1. 실패 로그 전체 읽기
@@ -89,7 +97,7 @@ SendMessage(to: "team-lead", message: "테스트 실패 - 구현 코드 수정 �
 
 ## ❗ 완료 보고 (필수 - 건너뛸 수 없음)
 
-전체 테스트 PASS 확인 후에만 전송:
+전체 회귀 테스트 PASS 확인 후에만 전송:
 ```
-SendMessage(to: "team-lead", message: "테스트 완료\n결과: <n>건 PASS / 0건 FAIL\n작성 파일: <경로>")
+SendMessage(to: "team-lead", message: "테스트 완료\n결과: <n>건 PASS / 0건 FAIL\n회귀 테스트: PASS\n작성 파일: <경로>")
 ```
