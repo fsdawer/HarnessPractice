@@ -38,6 +38,10 @@ public class RedisStreamConfig {
     public static final String REFUND_CONSUMER_GROUP = "refund-group";
     public static final String REFUND_CONSUMER_NAME = "refund-consumer-1";
 
+    public static final String NOTIFY_STREAM_KEY    = "notification-events";
+    public static final String NOTIFY_GROUP         = "notification-group";
+    public static final String NOTIFY_CONSUMER_NAME = "notify-consumer-1";
+
     private final StringRedisTemplate stringRedisTemplate;
 
     @PostConstruct
@@ -68,6 +72,8 @@ public class RedisStreamConfig {
 
         // 예약 취소 → 자동 환불 Stream 초기화
         initStream(REFUND_STREAM_KEY, REFUND_CONSUMER_GROUP);
+        // SSE 알림 Stream 초기화
+        initStream(NOTIFY_STREAM_KEY, NOTIFY_GROUP);
     }
 
     private void initStream(String streamKey, String groupName) {
