@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { notificationApi } from '@/api/notification'
 
 export const useNotificationStore = defineStore('notification', () => {
   const notifications = ref([])
@@ -88,7 +89,11 @@ export const useNotificationStore = defineStore('notification', () => {
 
     eventSource.addEventListener('notification', (e) => {
       try {
-        addNotification(JSON.parse(e.data))
+        const msg = JSON.parse(e.data)
+        addNotification(msg)
+        if (msg.streamMessageId) {
+          notificationApi.ack(msg.streamMessageId).catch(() => {})
+        }
       } catch (err) {
         console.error('알림 파싱 오류', err)
       }

@@ -15,4 +15,5 @@ public class NotificationMessage {
     private String reservedAt;
     private String message;
     private String dedupKey;       // 클라이언트 중복 수신 방지용 (type:reservationId 또는 type:reservedAt)
+    private String streamMessageId; // Redis Stream Record ID — 클라이언트 ACK 호출 시 사용
 }
