@@ -1,5 +1,6 @@
 package beauty.beauty.reservation.service;
 
+import beauty.beauty.global.aop.ForceMaster;
 import beauty.beauty.chat.entity.ChatRoom;
 import beauty.beauty.chat.repository.ChatRoomRepository;
 import beauty.beauty.chat.service.ChatService;
@@ -249,8 +250,9 @@ public class ReservationServiceImpl implements ReservationService {
 
 
 
-    // 4. 예약 상세 조회
+    // 4. 예약 상세 조회 — 예약 생성 직후 Replication Lag으로 Slave에 미반영될 수 있으므로 Master 강제
     @Override
+    @ForceMaster
     @Transactional(readOnly = true)
     public ReservationResponse getReservationById(Long userId, Long reservationId) {
         Reservation reservation = reservationRepository.findById(reservationId)

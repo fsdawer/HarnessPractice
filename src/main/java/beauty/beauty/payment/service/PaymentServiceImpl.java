@@ -1,5 +1,6 @@
 package beauty.beauty.payment.service;
 
+import beauty.beauty.global.aop.ForceMaster;
 import beauty.beauty.chat.service.ChatService;
 import beauty.beauty.coupon.entity.UserCoupon;
 import beauty.beauty.coupon.repository.UserCouponRepository;
@@ -333,8 +334,9 @@ public class PaymentServiceImpl implements PaymentService {
                 .toList();
     }
 
-    // orderId로 단건 결제 조회 (결제 성공 화면용)
+    // orderId로 단건 결제 조회 (결제 성공 화면용) — 결제 직후 Lag 방지
     @Override
+    @ForceMaster
     @Transactional(readOnly = true)
     public PaymentResponse getByOrderId(Long userId, String orderId) {
         Payment payment = paymentRepository.findByOrderId(orderId)

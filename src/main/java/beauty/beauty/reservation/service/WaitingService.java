@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -38,5 +39,10 @@ public class WaitingService {
                 .build();
         
         waitingRepository.save(waiting);
+    }
+
+    @Transactional
+    public void deleteChunk(List<Waiting> chunk) {
+        waitingRepository.deleteAllInBatch(chunk);
     }
 }
