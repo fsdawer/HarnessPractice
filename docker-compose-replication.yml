@@ -1,0 +1,77 @@
+version: '3.8'
+
+# MySQL Master-Slave Replication 로컬 테스트 환경
+#
+# 실행: docker-compose -f docker-compose-replication.yml up -d
+#
+# 초기 복제 설정 (최초 1회):
+#   1. Master binlog 위치 확인:
+#      docker exec -it beauty-mysql-master mysql -uroot -proot -e "SHOW MASTER STATUS\G"
+#
+#   2. Slave 복제 설정:
+#      docker exec -it beauty-mysql-slave mysql -uroot -proot -e "
+#        CHANGE MASTER TO
+#          MASTER_HOST='beauty-mysql-master',
+#          MASTER_USER='root',
+#          MASTER_PASSWORD='root',
+#          MASTER_LOG_FILE='mysql-bin.000001',
+#          MASTER_LOG_POS=0;
+#        START SLAVE;"
+#
+#   3. 복제 상태 확인:
+#      docker exec -it beauty-mysql-slave mysql -uroot -proot -e "SHOW SLAVE STATUS\G"
+#      → Slave_IO_Running: Yes, Slave_SQL_Running: Yes, Seconds_Behind_Master: 0
+#
+# 로컬 단일 DB 개발 시: .env에 DB_SLAVE_HOST=localhost, DB_SLAVE_PORT=3306 설정
+
+services:
+  mysql-master:
+    image: mysql:8.0
+    container_name: beauty-mysql-master
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: Beauty
+      MYSQL_USER: beauty_user
+      MYSQL_PASSWORD: beauty_pass
+    command: >
+      --server-id=1
+      --log-bin=mysql-bin
+      --binlog-format=ROW
+      --binlog-do-db=Beauty
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-master-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mysql-slave:
+    image: mysql:8.0
+    container_name: beauty-mysql-slave
+    ports:
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: Beauty
+      MYSQL_USER: beauty_user
+      MYSQL_PASSWORD: beauty_pass
+    command: >
+      --server-id=2
+      --relay-log=relay-log
+      --read-only=1
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql-slave-data:/var/lib/mysql
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+
+volumes:
+  mysql-master-data:
+  mysql-slave-data:

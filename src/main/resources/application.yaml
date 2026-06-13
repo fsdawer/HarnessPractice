@@ -7,18 +7,32 @@ spring:
       max-file-size: 10MB
       max-request-size: 50MB
 
-  # ── DB 연결 ──────────────────────────────────────────
+  # ── DB 연결 (Master-Slave Replication) ───────────────
   datasource:
-    url: jdbc:mysql://localhost:3306/Beauty?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: ${DB_USERNAME}      # .env → DB_USERNAME
-    password: ${DB_PASSWORD}      # .env → DB_PASSWORD
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
-      connection-timeout: 3000
-      idle-timeout: 600000
-      max-lifetime: 1800000
+    master:
+      jdbc-url: jdbc:mysql://localhost:3306/Beauty?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      username: ${DB_USERNAME}
+      password: ${DB_PASSWORD}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 20
+        minimum-idle: 5
+        connection-timeout: 3000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: HikariMasterPool
+    slave:
+      jdbc-url: jdbc:mysql://${DB_SLAVE_HOST:localhost}:${DB_SLAVE_PORT:3307}/Beauty?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      username: ${DB_SLAVE_USERNAME:${DB_USERNAME}}
+      password: ${DB_SLAVE_PASSWORD:${DB_PASSWORD}}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      hikari:
+        maximum-pool-size: 10
+        minimum-idle: 2
+        connection-timeout: 3000
+        idle-timeout: 600000
+        max-lifetime: 1800000
+        pool-name: HikariSlavePool
 
   # ── JPA ──────────────────────────────────────────────
   jpa:

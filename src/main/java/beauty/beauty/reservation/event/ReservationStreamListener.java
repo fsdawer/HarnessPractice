@@ -65,7 +65,6 @@ public class ReservationStreamListener implements StreamListener<String, MapReco
     }
 
     @Override
-    @Transactional
     public void onMessage(MapRecord<String, String, String> message) {
         String messageId = message.getId().getValue();
         String reservationIdStr = message.getValue().get("reservationId");
